@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.before-*
+*.orig
+dist/
+build/
+work/
+*.log
+assets/local/
+publish/local/

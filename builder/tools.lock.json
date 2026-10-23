@@ -1,0 +1,31 @@
+{
+ "_note": "Third-party tools fetched at build time from their official release pages. sha256 is filled in by 'fetch_tools.py --pin' (maintainer, once per version).",
+ "tools": [
+  {
+   "id": "fnv-to-fo4",
+   "version": "v63",
+   "url": "https://github.com/terry-haire/fnv-to-fo4/releases/download/v63/fnv-to-fo4-v63.zip",
+   "size": 105237115,
+   "sha256": "24c182fbb927f4507ebc99205c7c89eda4c87e04e76c404150b239e32a5d5c36",
+   "license": "GPL-3.0 (see tool/LICENSE after extraction)",
+   "dest": "tool",
+   "flatten": true,
+   "sentinels": [
+    "tool/build/xedit_converter/xConvert.exe"
+   ]
+  },
+  {
+   "id": "xedit",
+   "version": "4.1.5f",
+   "url": "https://github.com/TES5Edit/TES5Edit/releases/download/xedit-4.1.5f/xEdit.4.1.5f.7z",
+   "size": 31345110,
+   "sha256": "54c014da621f83f06a64fd92ddb8e32ed3082d1c65f543dc1c4e432130dced08",
+   "license": "MPL-2.0 (xEdit by the TES5Edit team)",
+   "dest": "tool/xedit",
+   "flatten": false,
+   "sentinels": [
+    "tool/xedit/xFOEdit.exe"
+   ]
+  }
+ ]
+}

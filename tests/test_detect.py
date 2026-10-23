@@ -1,0 +1,121 @@
+"""Detection tests on fake game folders (no real games needed): Steam-style libraries, odd folder names, Epic manifests, drive scan, bad folders.
+
+  python -m unittest discover -s tests -v
+"""
+import json, os, shutil, sys, tempfile, unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, 'builder'))
+import detect
+
+
+def touch(*parts):
+    p = os.path.join(*parts)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    open(p, 'wb').write(b'x')
+    return p
+
+
+def make_fo4(root):
+    touch(root, 'Fallout4.exe')
+    touch(root, 'Data', 'Fallout4.esm')
+    touch(root, 'Tools', 'Archive2', 'Archive2.exe')
+    touch(root, 'Tools', 'Elric', 'Elrich.exe')
+    touch(root, 'CreationKit.exe')
+    touch(root, 'Papyrus Compiler', 'PapyrusCompiler.exe')
+    return root
+
+
+def make_fo3(root, dlc=True, archives=True):
+    d = os.path.join(root, 'Data')
+    touch(d, 'Fallout3.esm')
+    if archives:
+        for b in ('Fallout - Meshes.bsa', 'Fallout - Textures.bsa', 'Fallout - Misc.bsa', 'Fallout - Sound.bsa', 'Fallout - Voices.bsa'):
+            touch(d, b)
+    if dlc:
+        for n in detect.FO3_DLC:
+            touch(d, n + '.esm')
+    return d
+
+
+class DetectTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        for k in ('FO4_DIR', 'FO3_DATA'):
+            os.environ.pop(k, None)
+        self.saved = (detect.steam_libraries, detect._bethesda_reg, detect.gog_paths, detect.epic_paths)     # isolate from the games installed on this PC
+        detect.steam_libraries = lambda: []
+        detect._bethesda_reg = lambda name: None
+        detect.gog_paths = lambda reg_root=None: []
+        detect.epic_paths = lambda manifest_dir=None: []
+
+    def tearDown(self):
+        detect.steam_libraries, detect._bethesda_reg, detect.gog_paths, detect.epic_paths = self.saved
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_env_override_wins(self):
+        fo4 = make_fo4(os.path.join(self.tmp, 'my games', "Fallout 4 (it's here)"))
+        os.environ['FO4_DIR'] = fo4
+        self.assertEqual(detect.find_fo4(), fo4)
+
+    def test_folder_with_spaces_apostrophe_and_unicode(self):
+        fo3 = make_fo3(os.path.join(self.tmp, 'Jeux \u00e9t\u00e9', "Fallout 3 goty - Bob's copy"))
+        self.assertEqual(detect.find_fo3_data(extra=[fo3]), fo3)
+
+    def test_invalid_folders_are_rejected(self):
+        empty = os.path.join(self.tmp, 'Fallout 4')
+        os.makedirs(os.path.join(empty, 'Data'))
+        touch(empty, 'Data', 'Fallout4.esm')                    # no Fallout4.exe
+        self.assertIsNone(detect.find_fo4(extra=[empty]))
+        fo3 = os.path.join(self.tmp, 'Fallout 3', 'Data')
+        touch(fo3, 'Fallout3.esm')                              # no archives
+        self.assertIsNone(detect.find_fo3_data(extra=[fo3]))
+
+    def test_drive_scan_finds_a_game_installed_anywhere(self):
+        deep = make_fo3(os.path.join(self.tmp, 'Games', 'Stuff', 'Fallout 3 GOTY'))
+        self.assertIsNone(detect.find_fo3_data(extra=[], scan=False))
+        hit = detect.find_fo3_data(extra=[], scan=[self.tmp])
+        self.assertIsNotNone(hit)
+        self.assertEqual(os.path.normcase(hit), os.path.normcase(deep))
+
+    def test_scan_depth_is_limited(self):
+        make_fo3(os.path.join(self.tmp, 'a', 'b', 'c', 'd', 'e', 'f', 'Fallout 3'))
+        self.assertEqual(detect.scan_roots(['Fallout 3'], [self.tmp], max_depth=3), [])
+        self.assertEqual(len(detect.scan_roots(['Fallout 3'], [self.tmp], max_depth=8)), 1)
+
+    def test_epic_manifest_is_read(self):
+        man = os.path.join(self.tmp, 'Manifests')
+        os.makedirs(man)
+        with open(os.path.join(man, 'abc.item'), 'w', encoding='utf-8') as f:
+            json.dump({'DisplayName': 'Fallout 3: Game of the Year Edition', 'InstallLocation': os.path.join(self.tmp, 'Epic', 'Fallout3')}, f)
+        with open(os.path.join(man, 'broken.item'), 'w') as f:
+            f.write('{not json')
+        got = self.saved[3](man)
+        self.assertEqual(len(got), 1)
+        self.assertIn('Fallout 3', got[0][0])
+
+    def test_inspect_reports_missing_pieces(self):
+        fo4 = os.path.join(self.tmp, 'fo4')
+        touch(fo4, 'Fallout4.exe')
+        touch(fo4, 'Data', 'Fallout4.esm')
+        fo3 = make_fo3(os.path.join(self.tmp, 'fo3'), dlc=False)
+        facts, problems = detect.inspect_install(fo4, fo3)
+        msgs = ' '.join(m for _, m in problems)
+        self.assertIn('Archive2', msgs)
+        self.assertIn('Elrich', msgs)
+        self.assertIn('DLC missing', msgs)
+        self.assertTrue(any(lv == 'error' for lv, _ in problems))
+
+    def test_inspect_clean_install_has_no_errors(self):
+        fo4 = make_fo4(os.path.join(self.tmp, 'fo4'))
+        fo3 = make_fo3(os.path.join(self.tmp, 'fo3'))
+        facts, problems = detect.inspect_install(fo4, fo3)
+        self.assertFalse([p for p in problems if p[0] == 'error'], problems)
+
+    def test_nothing_found_gives_clear_errors(self):
+        facts, problems = detect.inspect_install(None, None)
+        self.assertEqual(len([p for p in problems if p[0] == 'error']), 2)
+
+
+if __name__ == '__main__':
+    unittest.main()

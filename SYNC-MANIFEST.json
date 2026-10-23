@@ -1,0 +1,220 @@
+{
+ "files": [
+  {
+   "path": "actors/name_actors.py",
+   "sha256": "45f109503ee50212e7c2246456694474509028c55b7341585af60b0b477649b9"
+  },
+  {
+   "path": "actors/name_disabled.py",
+   "sha256": "35090ae703704d5eb901315cd05e500d7e7a0c0e856ac169f5a90cc28a80f969"
+  },
+  {
+   "path": "actors/name_more_actors.py",
+   "sha256": "bdb32398b4ffbd1b7926c43f22df9ddc567bc8a7662eb1b2efef18697c954dab"
+  },
+  {
+   "path": "build-actor-map.ps1",
+   "sha256": "5a737ff73a32afb32bff66cd779ce398a15c7a6dacd9f5b9815ec1704e5037f4"
+  },
+  {
+   "path": "builder/capital_builder.py",
+   "sha256": "c6a9d4ac652811920dc223182f92bec20324267de452d74e453ff6d2d9b21691"
+  },
+  {
+   "path": "builder/detect.py",
+   "sha256": "4188672b1727b34b587df2bb12d252ffce28b4868fb3ecc4ed166147b7665d99"
+  },
+  {
+   "path": "builder/gui.py",
+   "sha256": "834377a85e497ae9ded0ca345a959ef18e235f7af732f904b841dbd716dc4a78"
+  },
+  {
+   "path": "builder/make_exe.py",
+   "sha256": "61ff68070b6b971193a33c66457696021103f09000ddbe70946ff512be91cb17"
+  },
+  {
+   "path": "builder/stages.py",
+   "sha256": "a47817459819c66a2e76bed4e8a7eaf5f29fd6484d2625022d98cc3f38341718"
+  },
+  {
+   "path": "builder/steps.py",
+   "sha256": "767ca9b867b4c6fa4233626287892dfffd02600eff68192507ed007ef6acf63c"
+  },
+  {
+   "path": "builder/xedit_auto.py",
+   "sha256": "7d35e4c0e3f17436cb8e15a2605a36baf5f2bab380505b16a8d7972ea06fd5f7"
+  },
+  {
+   "path": "capital-profile.ps1",
+   "sha256": "a8a39871621d667b6467cba62cbcbfe71e6aed6a4037c13926fa3234e369174a"
+  },
+  {
+   "path": "convert-fo3-assets.ps1",
+   "sha256": "15ad6025dc3c14ac9ff3460de045b67bdc844a83d5987e1b4d7632eed8a0fe11"
+  },
+  {
+   "path": "install-output.ps1",
+   "sha256": "5eb52423789459ce8ec3a3dd0a8d72563fa1ba976516abb26f20e24d2be07b1f"
+  },
+  {
+   "path": "navmesh/convert_navmesh.py",
+   "sha256": "c77379d0fd563eddca355360fb354e07a76f87c076d8b2b8169c35b15af8091c"
+  },
+  {
+   "path": "navmesh/navlib.py",
+   "sha256": "7129007a48f7b9151a72485b8cf614f3d4ab5d344f014fa5bd299d1ce2665b9e"
+  },
+  {
+   "path": "packaging/ba2_tool.py",
+   "sha256": "2e0b00263dd6b41c22ea07fe7313a9ce42267c9032eafbe5f40665962d30aa95"
+  },
+  {
+   "path": "packaging/common.ps1",
+   "sha256": "29c2deb6c68a419cf3d290fbcf66d44b1725e75006464e1a0f9932a49b483ce2"
+  },
+  {
+   "path": "packaging/pack_ba2.ps1",
+   "sha256": "c9468fd34ddbdb7e9a0c678386ad3383c363d4814e0d8f545154ed189ab53a86"
+  },
+  {
+   "path": "packaging/stage_dds.py",
+   "sha256": "ac0e8c4704e14215b75c17b7a5605a4a1bca6d30e420406899d11bf26888e93e"
+  },
+  {
+   "path": "rename-master.ps1",
+   "sha256": "cf36835a3339de01ad92e4b0d880cf822ef8248e05b5faa7899af54966c40abd"
+  },
+  {
+   "path": "tests/crashers.txt",
+   "sha256": "a74a938d05c7d264564900bb2df41798624320994dc31144b52a244c11199615"
+  },
+  {
+   "path": "tool/xedit/Edit Scripts/FO3 - Export actors.pas",
+   "sha256": "22e60fee53e4b0461753c1e0471ead3b7d0f4174aadcb27696c8f499214d895a"
+  },
+  {
+   "path": "tool/xedit/Edit Scripts/FO3 and FNV - Translator.pas",
+   "sha256": "aa801a8989747b59479d2b685f56a61d3fc84b9af2b45722aad4af2fa225ec10"
+  },
+  {
+   "path": "tool/xedit/Edit Scripts/FO4 - List NPC templates.pas",
+   "sha256": "02ffd26ed505816f70a613b2a7c32838ca8d512e614c3b53c9b388f3eab9a115"
+  },
+  {
+   "path": "tool/xedit/Edit Scripts/FO4 - List actors.pas",
+   "sha256": "7ece0e13e5c44c2511d339d16822f3b7bdbddf88adb67792463771696a30eac5"
+  },
+  {
+   "path": "tool/xedit/Edit Scripts/FO4 - Place actors.pas",
+   "sha256": "0116513cd669abd24ac9486d4ec3c562ee8717d7ddddc187e10f33c81689f986"
+  },
+  {
+   "path": "tools/make_blank_bik.py",
+   "sha256": "b43ede388c9d7193278773258ff760fe8e0fe77431c061555e01e600fa4feaed"
+  },
+  {
+   "path": "tools/patch_bink_track.py",
+   "sha256": "1f1ba85c03ea7a1026f84b1c84665441b181f00fcfbb5ee1e5a44383480040bf"
+  },
+  {
+   "path": "worldfix/add_door_anim.py",
+   "sha256": "1e86a51c180a46b9fcacb113f8f9dc0765467aa6de4c09b3241e02be5ec10cc4"
+  },
+  {
+   "path": "worldfix/add_terminal_hybrid.py",
+   "sha256": "1dc1749c1abfb67f10d6a037b17562ca6b9154bda764e6fe6f35c4acdbd34f5e"
+  },
+  {
+   "path": "worldfix/add_terminal_screen.py",
+   "sha256": "18793a4c5a9cb1e7a0cba641bfce31dd95da10cdb7f9d1273ca8f0cde3e34abf"
+  },
+  {
+   "path": "worldfix/apply-fixes.ps1",
+   "sha256": "c4658e86f63446f79bc92d66ee23920eafa85b34e0255f6f102908305e3f6eab"
+  },
+  {
+   "path": "worldfix/audit_meshes.py",
+   "sha256": "6d7a415f0767c6f78451b70cc42eb074a6fcfce4b098c0eff929b77666e61dfd"
+  },
+  {
+   "path": "worldfix/ba2_extract.py",
+   "sha256": "3090f5c5ea96cc21145c007c93d35f7ab976b13bc79cf87608db03a781f4df74"
+  },
+  {
+   "path": "worldfix/bsa_extract.py",
+   "sha256": "960ce83ff04723abd864ef932774dc547463a3535aa7b944d476c30c4628c37f"
+  },
+  {
+   "path": "worldfix/build_door_anims.py",
+   "sha256": "a096fe9692d1bd20cf240fbc4865ef9c0fea7b16ab48a6dee4c853a5f013b7b0"
+  },
+  {
+   "path": "worldfix/convert_missing.py",
+   "sha256": "6437eed1a2ad27c32debefe09a4dd7da71257ac7ddeec910d5af5e37e6a40858"
+  },
+  {
+   "path": "worldfix/convert_single_mesh.py",
+   "sha256": "87bafcbff0b886d7e49d989818add3e63e3df2a90af53e1087bf8434aec4573f"
+  },
+  {
+   "path": "worldfix/fix_crashers.py",
+   "sha256": "6a5c935b3781ff075e2f59cffbf7f567f18b10c15db8b0480a7f786c57f80ef1"
+  },
+  {
+   "path": "worldfix/fix_enable_state.py",
+   "sha256": "cec40e6730be17a0ced4effc58df3fb068ebec943fcc569555aa6907c7972f16"
+  },
+  {
+   "path": "worldfix/fix_interior_lighting.py",
+   "sha256": "bea32fd11ce4f1d2cf3ff1a2281bdd3bc9830ebd5444a601a8b451d2033bdb12"
+  },
+  {
+   "path": "worldfix/fix_nif_anim_collision.py",
+   "sha256": "24c67e5f1b547884ec806de6f738bd84d6301dd4e59339b4dd88b626abc586a3"
+  },
+  {
+   "path": "worldfix/fix_regions.py",
+   "sha256": "1c5f0185e22c4a23c51e7889970c015066cee3993ea04740f51f821aba1fee1d"
+  },
+  {
+   "path": "worldfix/fix_stub_cells.py",
+   "sha256": "4497f6e951c06efd017345a7a944985820b34f5fb01e4897ae6acaabe9fbadfe"
+  },
+  {
+   "path": "worldfix/fix_terminal_refs.py",
+   "sha256": "5b9473f3a25699b19200959443e53e07b46944eb1603177e87d922039fe63c4b"
+  },
+  {
+   "path": "worldfix/lock_terminals.py",
+   "sha256": "c373aab9417df2aa9fb848e8398c7316f8ebf712761d432db0dceca2be36e24b"
+  },
+  {
+   "path": "worldfix/make_empty_plugin.py",
+   "sha256": "3e276fae70fab69ad6ff5e43f063857fafc01ca4f7f6ae2c47d2f45c16059e8a"
+  },
+  {
+   "path": "worldfix/place_disabled_actors.py",
+   "sha256": "d6107a63a16319448cadf748ef66c445ae4dcf7222995d26b7bbe02d9ed70895"
+  },
+  {
+   "path": "worldfix/restore_actors.py",
+   "sha256": "e0bd3ac63acbec6c78820f2810f43a78ae39f8755be26538090c6bb04766d90e"
+  },
+  {
+   "path": "worldfix/restore_dlc_refs.py",
+   "sha256": "9339997ae70bcd009d3e26531763c57707d7697e45b75a5fb5cc3bf52dc3d1b3"
+  },
+  {
+   "path": "worldfix/restore_refs.py",
+   "sha256": "f1dd6d574b6dc637a7dd65b2bfe69f65f2cb32537371de85422da102f76a437c"
+  },
+  {
+   "path": "worldfix/scan_animated_nifs.py",
+   "sha256": "f421c280f8f9c2e2d25a3d61ea49058570f0c90ea5d9ee806a64af5aeb55e8b0"
+  },
+  {
+   "path": "worldfix/terminal_models.json",
+   "sha256": "487daddaffa083948b5aefa36802e2b10e2c957c2e93eb15c02ea9361b57d34e"
+  }
+ ]
+}

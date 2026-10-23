@@ -1,0 +1,16 @@
+{
+ "_help": "Copy of this file is created as publish/local/config.json by `python publish/publish.py setup`. Fill in YOUR values there; that file is git-ignored and never published.",
+ "repo": "OWNER/REPO-NAME",
+ "author_name": "your-github-username",
+ "author_email": "your-github-username@users.noreply.github.com",
+ "private_strings": [
+  "words or paths that must never appear in anything public: your Windows user name, your real e-mail or its domain, your folder names"
+ ],
+ "signing_key_paths": [
+  "full path of your release private key file (its contents are searched for and blocked; the file is never read for any other purpose)"
+ ],
+ "dev_tree": "full path of your development folder (only tools/sync_from_dev.py uses it)",
+ "dev_literals": [
+  ["a path as it appears in your dev scripts", "the neutral placeholder it is replaced with, e.g. X:\\__CAPITAL_WORKDIR__"]
+ ]
+}
