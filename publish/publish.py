@@ -88,8 +88,12 @@ def key_fingerprints(cfg):
     return out
 
 
-def scan_dir(d, cfg, label='tree'):
-    """returns a list of problem strings for every file below d"""
+BINARY_EXT = ('.exe', '.dll', '.pyd')
+
+
+def scan_dir(d, cfg, label='tree', binary_light=False):
+    """returns a list of problem strings for every file below d.  binary_light: for the packaged Python runtime, programs are only checked for your private strings and your signing key
+    (the generic credential / personal-path patterns match random bytes and build paths of the official Python files)"""
     problems = []
     privs = [(s, re.compile(re.escape(s.encode('utf-8')), re.I)) for s in cfg.get('private_strings', []) if s]
     keys = key_fingerprints(cfg)
@@ -114,11 +118,12 @@ def scan_dir(d, cfg, label='tree'):
                 m = rx.search(data)
                 if m:
                     problems.append('%s: %s contains a private string (%d chars, line %d)' % (label, rel, len(s), data[:m.start()].count(b'\n') + 1))
-            for rx in SECRET_RX:
+            light = binary_light and (f.lower().endswith(BINARY_EXT) or ('_internal/' in rel and '_internal/payload/' not in rel))      # third-party runtime files; our own payload scripts are scanned in full
+            for rx in ([] if light else SECRET_RX):
                 m = re.search(rx, data)
                 if m:
                     problems.append('%s: %s looks like a credential (line %d)' % (label, rel, data[:m.start()].count(b'\n') + 1))
-            for rx in GENERIC_PERSONAL:
+            for rx in ([] if light else GENERIC_PERSONAL):
                 m = re.search(rx, data)
                 if m:
                     problems.append('%s: %s contains a personal Windows path (line %d)' % (label, rel, data[:m.start()].count(b'\n') + 1))
@@ -301,7 +306,7 @@ def check_release_dir(root, cfg, version):
     for z in (os.path.join(d, 'CapitalConvert-%s.zip' % version), pz):
         with tempfile.TemporaryDirectory() as t:
             zipfile.ZipFile(z).extractall(t)
-            pr, _ = scan_dir(t, cfg, os.path.basename(z))
+            pr, _ = scan_dir(t, cfg, os.path.basename(z), binary_light=True)
             # the packaged Python runtime is binary: only the personal strings / credentials / key checks matter there
             problems += [p for p in pr if 'forbidden file' not in p and 'MB (limit' not in p]
     return d, problems
