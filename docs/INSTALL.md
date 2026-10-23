@@ -31,8 +31,9 @@
 
 ## Play
 * Start Fallout 4 from Steam. The first start loads about 3 minutes (the world is large).
-* At the main menu press `~` and type `coc MegatonPlaza` (or `coc TheMallMonument`, `coc RivetCityExterior04`). `tgm` is god mode.
-* A normal *New Game* still starts Fallout 4's own intro; this demo is for exploring the world.
+* Choose **New Game**. Instead of Fallout 4's pre-war intro you arrive right outside Vault 101 with a Pip-Boy; the quest *Escape!* is already completed, and the character
+  editor and SPECIAL screen open first. (While the mod is installed every New Game starts this way; uninstall to get the normal start back.)
+* To go somewhere else: press `~` and type `coc MegatonPlaza` (or `coc TheMallMonument`, `coc RivetCityExterior04`). `tgm` is god mode.
 
 ## What the install changes on your PC
 * Adds the converted files to `Fallout 4\Data` (plugins, archives, a few loose meshes and videos). Anything it would replace is copied to the `backup` folder first.

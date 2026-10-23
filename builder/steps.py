@@ -7,15 +7,31 @@ from stages import FO3_PLUGINS
 PY = None
 
 
+WARNINGS = []                      # problems that do not stop the build but must not be hidden: shown as a summary when the build ends
+
+
+def _warn(cfg, text):
+    WARNINGS.append(text)
+
+
 def _py(cfg):
     return [sys.executable, '--script'] if getattr(sys, 'frozen', False) else [sys.executable]
 
 
-def _run(cmd, cwd, log, env=None, tolerate=False):
+def _run(cmd, cwd, log, env=None, tolerate=False, collect=None):
+    """runs a helper program; its output goes through LogFilter (millions of converter lines become a few progress lines, the full text goes to raw-output.log);
+    collect = a list that receives every raw line (to look for results)"""
+    from logfilter import LogFilter
     log('    $ ' + ' '.join(cmd))
     p = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000 if os.name == 'nt' else 0)
+    flt = LogFilter(os.environ.get('CAPITAL_RAW_LOG'))
     for line in p.stdout:
-        log('      ' + line.rstrip())
+        if collect is not None:
+            collect.append(line.rstrip())
+        for shown in flt.feed(line):
+            log('      ' + shown.strip() if shown.startswith('      ') else '      ' + shown)
+    for shown in flt.finish():
+        log(shown)
     rc = p.wait()
     if rc != 0 and not tolerate:
         raise RuntimeError('exit %d: %s' % (rc, ' '.join(cmd)))
@@ -263,14 +279,26 @@ def meshes(cfg, log):
     _run(py + [os.path.join(wd, 'worldfix', 'scan_animated_nifs.py'), '--out', os.path.join(out, 'loose')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
     audit = os.path.join(wd, 'lab', 'audit.txt')
+    os.makedirs(os.path.dirname(audit), exist_ok=True)
     with open(audit, 'w', encoding='utf-8') as f:
         p = subprocess.run(py + [os.path.join(wd, 'worldfix', 'audit_meshes.py')], cwd=wd, stdout=f, stderr=subprocess.STDOUT, creationflags=0x08000000 if os.name == 'nt' else 0)
-    log('  audit_meshes -> lab/audit.txt (exit %d)' % p.returncode)
-    _run(py + [os.path.join(wd, 'worldfix', 'convert_missing.py'), audit], wd, log, tolerate=True)
+    if p.returncode != 0:                                       # a failed audit used to be logged as "exit 1" and the stage still said done: the repair then silently did nothing
+        raise RuntimeError('the mesh audit failed (exit %d): see %s' % (p.returncode, audit))
+    log('  audit_meshes -> lab/audit.txt (ok)')
+    lines = []
+    _run(py + [os.path.join(wd, 'worldfix', 'convert_missing.py'), audit], wd, log, tolerate=True, collect=lines)
+    ok = sum(1 for l in lines if l.startswith('OK '))
+    absent = sum(1 for l in lines if l.startswith('ABSENT '))
+    bad = [l for l in lines if l.startswith('FAIL ')]
+    log('  mesh repair: %d converted, %d are missing in Fallout 3 itself (nothing to convert), %d could not be converted' % (ok, absent, len(bad)))
+    if bad:
+        _warn(cfg, '%d meshes could not be converted and stay missing (see raw-output.log): the objects that use them are invisible in the game' % len(bad))
     # the doors Elric crashes on (reported 'model missing from archives' by build_door_anims): convert them one by one, then give them their animation
     for rel, extra in (('dungeons/metro/exterior/metrotunneltransdoorload01.nif', ['--no-collision']), ('dungeons/vault/halls/vdoor01.nif', []),
                        ('dungeons/vaultruined/doors/vdoorr01.nif', [])):
-        _run(py + [os.path.join(wd, 'worldfix', 'convert_single_mesh.py'), rel] + extra, wd, log, tolerate=True)
+        rc = _run(py + [os.path.join(wd, 'worldfix', 'convert_single_mesh.py'), rel] + extra, wd, log, tolerate=True)
+        if rc != 0 or not os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
+            _warn(cfg, 'the door mesh %s was not repaired: that door will not animate properly (Vault 101 door, metro doors)' % rel)
     _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'add_terminal_hybrid.py')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'fix_terminal_refs.py'), '--delta', '-90'], wd, log)

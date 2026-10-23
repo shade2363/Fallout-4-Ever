@@ -10,4 +10,5 @@ print(len(paths), 'meshes to convert')
 for p in paths:
     r = subprocess.run([sys.executable, os.path.join(here, 'convert_single_mesh.py'), p], capture_output=True, text=True)
     last = (r.stdout.strip().splitlines() or ['?'])[-1]
-    print(('OK   ' if r.returncode == 0 else 'FAIL '), p, '|', last[:100], flush=True)
+    kind = 'OK   ' if r.returncode == 0 else ('ABSENT ' if r.returncode == 2 else 'FAIL ')        # exit 2 = the mesh is not in any Fallout 3 archive either: the original game lacks it too
+    print(kind, p, '|', last[:100], flush=True)

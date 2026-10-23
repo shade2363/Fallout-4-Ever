@@ -173,16 +173,28 @@ def run_gui():
             tree.insert('', 'end', iid=sg['id'], values=(sg['title'], sg.get('eta', ''), state))
         return any(lv == 'error' for lv, _ in problems)
 
+    def add_log(lines):
+        log.configure(state='normal')
+        log.insert('end', chr(10).join(lines) + chr(10))
+        extra = int(log.index('end-1c').split('.')[0]) - 2000          # keep the window to the last 2000 lines (the full text is in builder.log)
+        if extra > 0:
+            log.delete('1.0', '%d.0' % (extra + 1))
+        log.see('end')
+        log.configure(state='disabled')
+
     def pump():
+        lines, n = [], 0
         try:
-            while True:
+            while n < 250:                       # a burst of log lines must never block the window: at most 250 events per tick, the rest next tick
+                n += 1
                 kind, val = q.get_nowait()
                 if kind == 'log':
-                    log.configure(state='normal')
-                    log.insert('end', val + '\n')
-                    log.see('end')
-                    log.configure(state='disabled')
-                elif kind == 'progress':
+                    lines.append(val)
+                    continue
+                if lines:
+                    add_log(lines)
+                    lines = []
+                if kind == 'progress':
                     i, sg = val
                     bar['value'] = i
                     if sg:
@@ -198,7 +210,9 @@ def run_gui():
                     stop_btn.config(state='disabled')
         except queue.Empty:
             pass
-        root.after(200, pump)
+        if lines:
+            add_log(lines)
+        root.after(50 if n >= 250 else 200, pump)
 
     def go(start=None):
         if refresh() and not messagebox.askyesno(cb.APP, 'The checks show errors. Try anyway?'):

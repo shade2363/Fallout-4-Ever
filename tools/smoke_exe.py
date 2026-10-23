@@ -53,6 +53,20 @@ def main():
     check('update-check fails politely offline', rc in (0, 3) and 'Traceback' not in out, out)
     rc, out = run(exe, ['uninstall', '--workdir', wd])
     check('uninstall shows a preview and changes nothing', rc == 0 and 'Traceback' not in out, out)
+    # the pipeline scripts run "<this exe> <script.py>": it must run the script, and a crashing script must end with an exit code, never a blocking error dialog
+    good, bad = os.path.join(wd, 'good_script.py'), os.path.join(wd, 'bad_script.py')
+    with open(good, 'w') as f:
+        f.write('print("script ran ok")\n')
+    with open(bad, 'w') as f:
+        f.write('raise FileNotFoundError("deliberate test crash")\n')
+    rc, out = run(exe, [good], timeout=90)
+    check('a bare .py path runs as a script (mesh repair calls the exe this way)', rc == 0 and 'script ran ok' in out, out)
+    try:
+        rc, out = run(exe, [bad], timeout=90, env={'LOCALAPPDATA': wd})
+        check('a crashing script exits with an error code and no dialog', rc != 0 and 'deliberate test crash' in out, out)
+        check('the crash is written to crash.log', os.path.isfile(os.path.join(wd, 'CapitalConvert', 'crash.log')))
+    except subprocess.TimeoutExpired:
+        check('a crashing script exits with an error code and no dialog', False, 'timed out: probably a blocking error dialog')
     p = subprocess.Popen([exe])
     time.sleep(8)
     alive = p.poll() is None

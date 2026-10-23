@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea (Discussions)
+    url: https://github.com/shade2363/Fallout-4-Ever/discussions
+    about: Ask how something works or share an idea. Please read the FAQ and troubleshooting pages first.
+  - name: Security problem
+    url: https://github.com/shade2363/Fallout-4-Ever/security/advisories/new
+    about: Report a vulnerability privately (see SECURITY.md). Do not open a public issue.

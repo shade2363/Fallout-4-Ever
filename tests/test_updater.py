@@ -65,7 +65,7 @@ class UpdaterTests(unittest.TestCase):
         if self.srv:
             self.srv.stop()
             shutil.rmtree(self.rel, ignore_errors=True)
-        make_release(self.rel, kw.pop('version', '0.2.0'), kw.pop('files', {'worldfix/a.py': 'print(1)', 'README.md': 'x'}), self.key, **kw)
+        make_release(self.rel, kw.pop('version', '9.2.0'), kw.pop('files', {'worldfix/a.py': 'print(1)', 'README.md': 'x'}), self.key, **kw)
         self.srv = Server(self.rel)
         os.environ['CAPITAL_UPDATE_URL'] = self.srv.url
         return self.srv.url
@@ -74,9 +74,9 @@ class UpdaterTests(unittest.TestCase):
         self.serve()
         info = self.u.check()
         self.assertTrue(info['newer'])
-        self.assertEqual(info['latest'], '0.2.0')
+        self.assertEqual(info['latest'], '9.2.0')
         self.u.apply(info, lambda *_: None)
-        self.assertTrue(self.u.active_payload().endswith(os.path.join('0.2.0', 'payload')))
+        self.assertTrue(self.u.active_payload().endswith(os.path.join('9.2.0', 'payload')))
         self.assertTrue(os.path.exists(os.path.join(self.u.active_payload(), 'worldfix', 'a.py')))
 
     def test_same_version_is_not_newer(self):
@@ -125,11 +125,11 @@ class UpdaterTests(unittest.TestCase):
     def test_rollback_returns_to_previous_then_bundled(self):
         self.serve()
         self.u.apply(self.u.check(), lambda *_: None)
-        self.serve(version='0.3.0', files={'worldfix/a.py': 'print(3)'})
+        self.serve(version='9.3.0', files={'worldfix/a.py': 'print(3)'})
         self.u.apply(self.u.check(), lambda *_: None)
-        self.assertEqual(self.u.current_payload_version(), '0.3.0')
+        self.assertEqual(self.u.current_payload_version(), '9.3.0')
         self.u.rollback(lambda *_: None)
-        self.assertEqual(self.u.current_payload_version(), '0.2.0')
+        self.assertEqual(self.u.current_payload_version(), '9.2.0')
         self.u.rollback(lambda *_: None)
         self.assertIsNone(self.u.active_payload())
 

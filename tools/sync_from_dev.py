@@ -16,7 +16,7 @@ ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 06
     'builder/capital_builder.py', 'builder/gui.py', 'builder/detect.py', 'builder/steps.py', 'builder/stages.py', 'builder/xedit_auto.py',
     'builder/make_exe.py',
     'tools/make_blank_bik.py', 'tools/patch_bink_track.py',
-    'convert-fo3-assets.ps1', 'rename-master.ps1', 'build-actor-map.ps1', 'install-output.ps1', 'capital-profile.ps1',
+    'convert-fo3-assets.ps1', 'rename-master.ps1', 'build-actor-map.ps1', 'install-output.ps1',
     'worldfix/apply-fixes.ps1', 'worldfix/restore_dlc_refs.py', 'worldfix/place_disabled_actors.py', 'worldfix/fix_crashers.py', 'worldfix/lock_terminals.py',
     'worldfix/scan_animated_nifs.py', 'worldfix/build_door_anims.py', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py',
     'worldfix/convert_single_mesh.py', 'worldfix/add_terminal_hybrid.py', 'worldfix/fix_terminal_refs.py', 'worldfix/make_empty_plugin.py',
@@ -35,7 +35,7 @@ DENY_DIRS = ['dialogue/', 'ai/', 'audio/', 'voice/', 'quests/', 'items/', 'perks
 REF = re.compile(r'[A-Za-z0-9_./\\ -]*[A-Za-z0-9_-]\.(?:py|ps1|pas|json|psc)\b')
 IMP = re.compile(r'^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)', re.M)
 TEXT = ('.py', '.ps1', '.psc', '.pas')
-OWNED = ('builder/', 'install-output.ps1')       # seeded once from the dev tree, then owned by this repo
+OWNED = ('builder/', 'install-output.ps1', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py', 'worldfix/convert_single_mesh.py')       # seeded once from the dev tree, then owned by this repo
 # machine-specific literals of the dev PC -> neutral placeholders (the builder's staging step maps the placeholders to the user's detected folders)
 def _local():
     """your dev-machine paths live in publish/local/config.json (git-ignored); nothing personal is written in this tracked file"""
@@ -57,7 +57,7 @@ def scrub(text):
     return text
 # copied but never followed: they mention every stage of the full port, the demo lists its own files in ENTRY
 NOFOLLOW = ['builder/stages.py', 'builder/steps.py', 'builder/capital_builder.py', 'builder/gui.py', 'builder/make_exe.py', 'builder/detect.py',
-            'install-output.ps1', 'capital-profile.ps1', 'packaging/pack_ba2.ps1']
+            'install-output.ps1', 'packaging/pack_ba2.ps1']
 
 
 ALLOW = ['tests/crashers.txt']          # data the demo needs although its folder is denied (see TRANSFORM)

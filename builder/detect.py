@@ -237,7 +237,7 @@ def inspect_install(fo4=None, fo3_data=None):
         if ver and not ver.startswith('1.11.'):
             problems.append(('warn', 'Fallout 4 version %s: F4SE 0.7.9 and the bundled XDI need 1.11.x (the project was tested on 1.11.240); update the game in Steam.' % ver))
         needs = ((r'Tools\Archive2\Archive2.exe', 'Archive2', 'error'), (r'Tools\Elric\Elrich.exe', 'Elrich', 'error'),
-                 ('CreationKit.exe', 'Creation Kit', 'warn'), (r'Papyrus Compiler\PapyrusCompiler.exe', 'Papyrus compiler', 'warn'))
+                 ('CreationKit.exe', 'Creation Kit', 'error'), (r'Papyrus Compiler\PapyrusCompiler.exe', 'Papyrus compiler', 'error'))
         for rel, what, lvl in needs:
             ok = os.path.exists(os.path.join(fo4, rel))
             facts[what] = ok

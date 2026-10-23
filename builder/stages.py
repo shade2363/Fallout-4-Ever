@@ -14,7 +14,7 @@ PAYLOAD_DIRS = [
     'ui',
 ]
 PAYLOAD_FILES = [
-    'setup.ps1', 'convert-fo3-assets.ps1', 'install-output.ps1', 'rename-master.ps1', 'capital-profile.ps1', 'build-actor-map.ps1',
+    'setup.ps1', 'convert-fo3-assets.ps1', 'install-output.ps1', 'rename-master.ps1', 'build-actor-map.ps1',
     'audit-fo3-fo4.ps1', 'tools-launch-fo4.ps1', 'tools-send-keys.ps1', 'tools-test-plugins.ps1', 'README.md', 'ROADMAP.md',
     'tool/LICENSE', 'tool/README.md',
 ]
@@ -96,3 +96,12 @@ for _s in STAGES:
 for _s in STAGES:
     if _s['id'] == '18-install':
         _s['steps'] = [st for st in _s['steps'] if st[1] != 'capital-profile.ps1']
+
+# New Game start: outside Vault 101 with the Escape! quest completed (start/build_start.py builds CapitalStart.esp and compiles two scripts with your Creation Kit compiler)
+_start = dict(id='16-start', title='New Game start: outside Vault 101, Escape! completed (CapitalStart.esp)', eta='1 min',
+              steps=[('py', 'start/build_start.py', '--conv', '{wd}/tool/output/Fallout3.esm', '--fo4', '{fo4}', '--out', '{wd}/tool/output/CapitalStart.esp',
+                      '--src', '{wd}/scripts/src', '--scripts-out', '{wd}/scripts/out')],
+              requires=['{wd}/tool/output/Fallout3.esm', '{fo4}/Papyrus Compiler/PapyrusCompiler.exe'],
+              produces=['{wd}/tool/output/CapitalStart.esp', '{wd}/scripts/out/CapStartDemo.pex'])
+STAGES.insert([_s['id'] for _s in STAGES].index('18-install'), _start)
+PAYLOAD_DIRS = PAYLOAD_DIRS + ['start']

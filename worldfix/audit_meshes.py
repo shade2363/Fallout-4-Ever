@@ -16,8 +16,24 @@ for root, _, files in os.walk(loose):
         names.add(os.path.relpath(os.path.join(root, fn), loose).lower().replace(chr(92), '/'))
 fo4 = r'X:\__CAPITAL_FO4__\Data'
 miss = collections.defaultdict(list); total = 0
+_vanilla = {}                      # one file-system check per distinct mesh path (not one per record: that was hundreds of thousands of slow disk checks)
+
+
+def vanilla_has(p):
+    v = _vanilla.get(p)
+    if v is None:
+        v = _vanilla[p] = os.path.exists(os.path.join(fo4, 'Meshes', *p.split('/')))
+    return v
+
+
 for esm in ('Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', 'PointLookout.esm', 'Zeta.esm', 'CapitalItems.esp', 'CapitalActors.esp'):
-    d = open(os.path.join(OUT, esm), 'rb').read()
+    plugin = os.path.join(OUT, esm)
+    if not os.path.isfile(plugin):                 # CapitalItems.esp is not built by the demo
+        print('skipping %s: not part of this build' % esm, flush=True)
+        continue
+    with open(plugin, 'rb') as fh:
+        d = fh.read()
+    print('checking %s' % esm, flush=True)
     for r in iter_records(d):
         if r.sig in ('REFR', 'ACHR', 'ACRE', 'CELL', 'LAND', 'NAVM', 'WRLD', 'NAVI', 'PGRE', 'PMIS', 'INFO', 'DIAL', 'QUST'): continue
         try: s = subrecords(d, r)
@@ -28,7 +44,7 @@ for esm in ('Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', '
             if k == 'MODL' and len(v) > 4:
                 p = v.rstrip(bytes(1)).decode('latin1').lower().replace(chr(92), '/')
                 total += 1
-                if ('meshes/' + p) not in names and not os.path.exists(os.path.join(fo4, 'Meshes', *p.split('/'))):
+                if ('meshes/' + p) not in names and not vanilla_has(p):
                     miss[p].append((esm, r.sig, hex(r.fid), edid))
 print('MODL refs:', total, ' missing distinct meshes:', len(miss), ' records affected:', sum(len(v) for v in miss.values()))
 bysig = collections.Counter(x[1] for v in miss.values() for x in v); print(dict(bysig))

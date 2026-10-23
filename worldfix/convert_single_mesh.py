@@ -27,10 +27,10 @@ for i, (t, d) in enumerate(n.blocks):
             body = struct.unpack_from('<i', cd, 6)[0]
             if body < 0 or struct.unpack_from('<i', n.blocks[body][1], 0)[0] < 0: bad = True       # body without a shape
         if bad: f['coll'] = -1; n.blocks[i][1] = A.node_bytes(f); detached += 1
-os.makedirs(lab + '/var/meshes/new_vegas/' + os.path.dirname(rel)); open(lab + '/var/meshes/new_vegas/' + rel, 'wb').write(n.tobytes())
+os.makedirs(lab + '/var/meshes/new_vegas/' + os.path.dirname(rel), exist_ok=True); open(lab + '/var/meshes/new_vegas/' + rel, 'wb').write(n.tobytes())
 print('collision bodies detached before Elric:', detached)
 try:
-    cmd = '"%s/Tools/Elric/Elrich.exe" .\Settings\PCMeshes.esf "-ElricOptions.ConvertTarget=%s/var/meshes" "-ElricOptions.OutputDirectory=%s/out/meshes"' % (fo4, lab, lab)
+    cmd = r'"%s/Tools/Elric/Elrich.exe" .\Settings\PCMeshes.esf "-ElricOptions.ConvertTarget=%s/var/meshes" "-ElricOptions.OutputDirectory=%s/out/meshes"' % (fo4, lab, lab)
     subprocess.run(cmd.replace('/', chr(92)) if False else cmd, cwd=tool + '/src/models-and-animations/elric', timeout=120, capture_output=True)
 except subprocess.TimeoutExpired: pass
 res = lab + '/out/meshes/new_vegas/' + rel

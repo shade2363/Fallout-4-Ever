@@ -8,6 +8,13 @@ the result. We are not lawyers and this is not legal advice; see [LEGAL.md](LEGA
 The Capital Wasteland and the five DLC worlds load in Fallout 4, with converted terrain, buildings, interiors and doors; about 4,260 NPCs and creatures placed where they stood
 in Fallout 3 (including 300+ named characters as stand-in settlers); 7,198 navmeshes so they can walk and chase; terminal models and terminal locks; crash fixes.
 
+**Where does New Game start?**
+Right outside Vault 101 with the Pip-Boy, the quest *Escape!* already completed, then the character editor and SPECIAL screen. It replaces Fallout 4's own intro
+script while the mod is installed; uninstalling brings the normal start back. Details: [SCRIPTS.md](SCRIPTS.md).
+
+**New Game asks "Creations are currently loaded ... Achievements are disabled". Is that normal?**
+Yes: Fallout 4 shows that for any modded game. Press Enter to continue.
+
 **What does not work yet?**
 Quests, dialogue and voice, music and radio, weather and lighting, NPC faces, perks and skills, scripted set pieces, and the Fallout 3 character creation. It is a world to explore.
 

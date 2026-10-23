@@ -1,0 +1,65 @@
+name: Bug report
+description: Something did not work (a message, a failed step, a crash, something missing in the game)
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Do not attach or paste any game files** (plugins, archives, meshes, textures, audio, game screenshots): see CONTRIBUTING.md.
+        Read `docs/TROUBLESHOOTING.md` first: the answer may be there.
+  - type: input
+    id: version
+    attributes:
+      label: Program version
+      description: Shown top right in the window ("TERMINAL vX.Y.Z"), or the name of the zip you downloaded.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it go wrong?
+      options:
+        - The window does not start
+        - The checks panel (a [XX] line)
+        - Step 1 (prepare / tool download)
+        - Step 2 (assets)
+        - Step 3 (plugins)
+        - Step 4-5 (world repairs / LOD)
+        - Step 6 (actors, xEdit clicks)
+        - Navmesh / crash fixes / meshes / New Game start steps
+        - Install (copy into Fallout 4)
+        - In the game (crash, missing world, New Game does not start at Vault 101)
+        - Update / rollback
+        - Uninstall
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: Windows version, where Fallout 3 and Fallout 4 are installed from (Steam / GOG / Epic), Fallout 4 version, Creation Kit installed (yes/no), free disk space, RAM, other mods.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Paste the last 50 lines of `builder.log` from your work folder (default `%LOCALAPPDATA%\CapitalBuild`). It contains folder names with your Windows user name: replace what you do not want to share.
+      render: text
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Checks
+      options:
+        - label: I own Fallout 3 and Fallout 4 and did not attach any game files.
+          required: true
+        - label: I read docs/TROUBLESHOOTING.md.
+          required: true

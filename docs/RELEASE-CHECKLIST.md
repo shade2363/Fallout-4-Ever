@@ -5,6 +5,7 @@ Nothing is published until every box is ticked. Do the steps in order.
 ## Before building
 - [ ] `python -m unittest discover -s tests -v` passes (updates, change detection, detection).
 - [ ] `python tools/leak_scan.py` passes on the repo (0 problems).
+- [ ] `powershell -File tools\sandbox_install_test.ps1 -Work <finished work folder>` prints ALL PASSED (installs into a throw-away folder, reinstalls, uninstalls, proves nothing of ours or of someone else's is left or lost). Run it on the build and again on the copy downloaded from the release page.
 - [ ] After building the exe: `python tools/smoke_exe.py` prints ALL PASSED (runs the PACKAGED exe in a fresh work folder: tool list, downloads, a step, update-check offline, uninstall preview, window). Run it after every packaging change; a source run does not prove the exe works.
 - [ ] `builder/version.py`: `VERSION` bumped. `STEPS_REV` bumped **only** if the built-in steps in `builder/steps.py` now produce something different.
 - [ ] `CHANGELOG.md` has an entry; the save-compatibility label is decided (`save-safe`, `needs-new-save`, `needs-new-game`).
@@ -16,6 +17,7 @@ Nothing is published until every box is ticked. Do the steps in order.
 - [ ] Fresh Windows 10 and 11: unzip, double-click CapitalConvert.exe (no console window may flash), games detected (Steam default library; Steam library on another drive; path with spaces).
 - [ ] Full clean run to FINISHED; `builder.log` has no unexpected errors.
 - [ ] Install into a real Fallout 4: it starts **without** F4SE, the main menu appears, `coc MegatonPlaza`, `coc TheMallMonument`, `coc RivetCityExterior04` load, Papyrus log has no errors from our plugins.
+- [ ] New Game (from the main menu, no console; first done 2026-10-22 on the maintainer's PC through F4SE with a keyboard-driven run; STILL TO DO: plain Steam launch, a PC without the maintainer's custom menu files, and menus left untouched to confirm they wait for the player): no pre-war intro, you land outside Vault 101, Pip-Boy equipped, *Escape!* listed as completed, race menu then SPECIAL open, then you can walk. Papyrus log has no errors from CapStartDemo or QF_MQ101.
 - [ ] Uninstall: Data folder, `plugins.txt` and the ini files are identical to before (hash compare).
 - [ ] Stop and restart at different steps: the run resumes.
 - [ ] Wrong inputs: Fallout 4 missing, Creation Kit missing, Fallout 3 without DLC, low disk space, Fallout 4 running: clear messages, nothing damaged.

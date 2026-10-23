@@ -70,9 +70,9 @@ if ($DryRun) { Log 'DRY RUN: nothing will be written, copied, removed or restore
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # constants
 # the plugins of the port (CapitalClimate/Lighting/LOD/Water are old experiments and are NOT installed); archives and the plugins listed in $order below
-$pluginSet = 'Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', 'PointLookout.esm', 'Zeta.esm', 'CapitalNoBarks.esp', 'F3_Skills.esp', 'F3_Perks.esp', 'CapitalDLCActors.esp', 'CapitalCorpses.esp', 'CapitalActors.esp', 'CapitalNavmesh.esp', 'CapitalNavmeshDLC.esp', 'CapitalQuests.esp', 'CapitalItems.esp', 'CapitalFixes.esp', 'CapitalFurniture.esp', 'CapitalSounds.esp', 'CapitalDialogue.esp', 'CapitalChoices.esp', 'CapitalDLCDialogue.esp', 'CapitalAI.esp', 'CapitalDLCAI.esp', 'CapitalScripts.esp', 'CapitalRadio.esp', 'CapitalAnim.esp', 'CapitalChargen.esp'
+$pluginSet = 'Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', 'PointLookout.esm', 'Zeta.esm', 'CapitalNoBarks.esp', 'F3_Skills.esp', 'F3_Perks.esp', 'CapitalDLCActors.esp', 'CapitalCorpses.esp', 'CapitalActors.esp', 'CapitalNavmesh.esp', 'CapitalNavmeshDLC.esp', 'CapitalQuests.esp', 'CapitalItems.esp', 'CapitalFixes.esp', 'CapitalStart.esp', 'CapitalFurniture.esp', 'CapitalSounds.esp', 'CapitalDialogue.esp', 'CapitalChoices.esp', 'CapitalDLCDialogue.esp', 'CapitalAI.esp', 'CapitalDLCAI.esp', 'CapitalScripts.esp', 'CapitalRadio.esp', 'CapitalAnim.esp', 'CapitalChargen.esp'
 # load order for plugins.txt (XDI.esm is not ours: the user's F4SE/XDI copy, see README)
-$order = 'Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', 'PointLookout.esm', 'Zeta.esm', 'XDI.esm', 'CapitalNoBarks.esp', 'F3_Skills.esp', 'F3_Perks.esp', 'CapitalDLCActors.esp', 'CapitalCorpses.esp', 'CapitalActors.esp', 'CapitalNavmesh.esp', 'CapitalNavmeshDLC.esp', 'CapitalQuests.esp', 'CapitalItems.esp', 'CapitalFixes.esp', 'CapitalFurniture.esp', 'CapitalSounds.esp', 'CapitalDialogue.esp', 'CapitalChoices.esp', 'CapitalDLCDialogue.esp', 'CapitalAI.esp', 'CapitalDLCAI.esp', 'CapitalScripts.esp', 'CapitalRadio.esp', 'CapitalAnim.esp', 'CapitalChargen.esp'
+$order = 'Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', 'PointLookout.esm', 'Zeta.esm', 'XDI.esm', 'CapitalNoBarks.esp', 'F3_Skills.esp', 'F3_Perks.esp', 'CapitalDLCActors.esp', 'CapitalCorpses.esp', 'CapitalActors.esp', 'CapitalNavmesh.esp', 'CapitalNavmeshDLC.esp', 'CapitalQuests.esp', 'CapitalItems.esp', 'CapitalFixes.esp', 'CapitalStart.esp', 'CapitalFurniture.esp', 'CapitalSounds.esp', 'CapitalDialogue.esp', 'CapitalChoices.esp', 'CapitalDLCDialogue.esp', 'CapitalAI.esp', 'CapitalDLCAI.esp', 'CapitalScripts.esp', 'CapitalRadio.esp', 'CapitalAnim.esp', 'CapitalChargen.esp'
 $AlsoPlugins = @($AlsoPlugins | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 foreach ($a in $AlsoPlugins) { if ($order -notcontains $a) { $order = @($order) + $a }; if ($pluginSet -notcontains $a) { $pluginSet = @($pluginSet) + $a } }
 $ourPlugins = @($order | Where-Object { $_ -ne 'XDI.esm' })
@@ -305,8 +305,7 @@ if ($Uninstall) {
     }
     if ($u.prefsKey -ne 'untouched' -and (Test-Path $prefsIni)) {
       $t = Get-Content $prefsIni -Raw
-      if ($u.prefsKey -eq 'absent') { $t = $t -replace '(?m)^bEnableFileSelection=.*\r?\n?', '' } else { $t = $t -replace '(?m)^bEnableFileSelection=[^
-]*', ('bEnableFileSelection=' + $u.prefsKey) }
+      if ($u.prefsKey -eq 'absent') { $t = $t -replace '(?m)^bEnableFileSelection=.*\r?\n?', '' } else { $t = $t -replace '(?m)^bEnableFileSelection=[^\r\n]*', ('bEnableFileSelection=' + $u.prefsKey) }
       if ($DryRun) { Log "would restore bEnableFileSelection ($($u.prefsKey)) in Fallout4Prefs.ini" } else { Set-Content $prefsIni $t -NoNewline; Log "Fallout4Prefs.ini: bEnableFileSelection restored ($($u.prefsKey))" }
     }
     if (-not $DryRun) { Remove-Item $undoFile }
@@ -320,7 +319,7 @@ if ($Uninstall) {
 $plan = New-Plan
 if (-not $plan.Count) { throw "tool\output has no .esm/.ba2 files yet ($out)." }
 if (-not ($plan | Where-Object { $_.Group -eq 'plugins' })) { throw "no converted plugins in $out" }
-if ($script:noStage) { Log 'No staged archives (tool\output\ba2-stage\stage.json missing): installing the textures / faces / materials loose. Run packaging\pack_ba2.ps1 to build them.' 'Yellow' }
+if ($script:noStage) { Log 'Installing the textures / faces / materials as loose files (the demo does not pack them into archives). This is normal.' }
 foreach ($w in $script:staleStage) { Log "Staged archive NOT used: $w - its loose files are installed instead" 'Yellow' }
 if ($Loose) { Log '-Loose: no staged archives; textures / faces / materials / own models go in loose.' }
 
@@ -424,8 +423,7 @@ if ($DryRun) {
     if ($t -notmatch '(?m)^bEnableFileSelection=1') {
       if ($undo.prefsKey -eq 'untouched') { $undo.prefsKey = if ($t -match '(?m)^bEnableFileSelection=(.*?)\s*$') { $Matches[1] } else { 'absent' } }
       Copy-Item $prefsIni "$prefsIni.bak" -Force
-      if ($t -match '(?m)^bEnableFileSelection=') { $t = $t -replace '(?m)^bEnableFileSelection=[^
-]*', 'bEnableFileSelection=1' }
+      if ($t -match '(?m)^bEnableFileSelection=') { $t = $t -replace '(?m)^bEnableFileSelection=[^\r\n]*', 'bEnableFileSelection=1' }
       elseif ($t -match '(?m)^\[Launcher\]') { $t = $t -replace '(?m)^\[Launcher\]\s*$', "[Launcher]`r`nbEnableFileSelection=1" }
       else { $t += "`r`n[Launcher]`r`nbEnableFileSelection=1`r`n" }
       Set-Content $prefsIni $t -NoNewline
@@ -445,5 +443,5 @@ if (-not $DryRun) {
 }
 Flush-Log
 Log "Log: $logFile"
-if (-not $DryRun) { "Done. In game: open console (~) and type: coc MegatonEntrance  (or use the launchers in this folder)" }
+if (-not $DryRun) { "Done. Start Fallout 4 from Steam, choose New Game, and you start outside Vault 101." }
 Flush-Log

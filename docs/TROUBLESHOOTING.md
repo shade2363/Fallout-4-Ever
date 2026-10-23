@@ -30,6 +30,9 @@ Press **INSTALL / RESUME** again: finished steps are kept and the failed one is 
 | Convert plugins (step 3) crashes or the PC freezes | Not enough memory. Close other programs; it needs about 20 GB free RAM. |
 | Actors (step 6) stops or hangs | Something clicked or covered the xEdit window. Close everything, do not touch the mouse or keyboard, and run again. |
 | "Access denied" while installing | Run the program as Administrator, or install Steam games outside `Program Files`. |
+| Convert plugins (step 3) shows "Not responding" | Older builds froze the window while the converter ran. This version shows a progress line every 50,000 records (it is normal for step 3 to take 1-2 hours). The full output is in `raw-output.log` in the work folder. Do not close it. |
+| Meshes (step 15) prints a warning list at the end | A few meshes cannot be converted by the Fallout 4 mesh converter; the objects that use them stay invisible. The summary names them. The build is still usable. |
+| The program closes at once or stops with no message | Look in `%LOCALAPPDATA%\CapitalConvert\crash.log` and send it with `builder.log`. |
 | Disk full | Free space on the work folder drive and run again. |
 
 ## The game
@@ -37,6 +40,7 @@ Press **INSTALL / RESUME** again: finished steps are kept and the failed one is 
 |---|---|
 | The main menu appears but the Capital Wasteland is missing | Plugins are not enabled. Check `%LOCALAPPDATA%\Fallout4\plugins.txt` lists `*Fallout3.esm` ... `*CapitalActors.esp`. Run **INSTALL / RESUME** again to rewrite it. |
 | First launch seems frozen | The world is large: wait about 3 minutes with a black window before worrying. |
+| Black screen and no movement after typing `coc MegatonEntrance` at the main menu | Do not start that way: it skips the start-up and the game stays in a half-run intro. Choose **New Game** instead. If you already did, quit to the desktop and start again. |
 | Crash on start | Disable other mods, run the game once without them, then try again. Send `builder.log` and your Fallout 4 version. |
 | Flat or odd lighting, no weather changes | Expected in this demo: weather and lighting are not rebuilt yet. |
 | Everything is invisible after an update | Run **INSTALL / RESUME** so the changed steps and the install run again. |

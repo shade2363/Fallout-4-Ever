@@ -198,8 +198,13 @@ def run_stage(stage, cfg, log, state):
         cwd = os.path.join(wd, step_cwd(rest, kind)) if kind != 'call' else wd
         log('  > ' + ' '.join('"%s"' % c if ' ' in c else c for c in cmd))
         p = subprocess.Popen(cmd, cwd=wd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', creationflags=NOWIN)
+        from logfilter import LogFilter
+        flt = LogFilter(env.get('CAPITAL_RAW_LOG'))         # millions of converter lines become a few progress lines; the full text goes to raw-output.log
         for line in p.stdout:
-            log('    ' + line.rstrip())
+            for shown in flt.feed(line):
+                log('    ' + shown.strip())
+        for shown in flt.finish():
+            log(shown)
         if p.wait() != 0 and not stage.get('tolerate_exit'):
             raise RuntimeError('step failed (exit %d): %s' % (p.returncode, cmd[-1]))
 
@@ -239,7 +244,7 @@ def stage_done(stage, cfg, st):
 CALL_DEPS = {'prepare': [], 'convert_plugins': ['rename-master.ps1'], 'seed_worldfix': ['worldfix/apply-fixes.ps1'], 'lod_settings': [],
              'actors': ['actors', 'worldfix/place_disabled_actors.py', 'build-actor-map.ps1', 'tool/xedit/Edit Scripts'],
              'meshes': ['worldfix'], 'furn_keywords': [], 'sounds_placeholder': ['worldfix/make_empty_plugin.py']}
-SCRIPT_DIRS = ('worldfix', 'actors', 'navmesh', 'packaging')
+SCRIPT_DIRS = ('worldfix', 'actors', 'navmesh', 'packaging', 'start')
 TOOL_STAGES = ('01-prepare', '02-assets', '03-plugins')           # these also depend on the pinned third-party tool versions
 
 
@@ -272,6 +277,8 @@ def stage_hash(stage, wd):
             top = rest[0].split('/')[0]
             if top in SCRIPT_DIRS:
                 deps.append(top)
+            if top == 'start':
+                deps.append('navmesh/navlib.py')
         elif kind == 'call':
             deps += CALL_DEPS.get(rest[0], [])
             h.update(('call:%s:%s' % (rest[0], STEPS_REV)).encode())
@@ -311,6 +318,9 @@ def build(cfg, log, start=None, only=None, to=None, st=None, stop_flag=lambda: F
     todo = [s for s in STAGES if (only is None or s['id'] == only) and (start is None or ids.index(s['id']) >= ids.index(start))
             and (to is None or ids.index(s['id']) <= ids.index(to))]
     log('=== %s %s: %d stage(s) ===' % (APP, VERSION, len(todo)))
+    import steps
+    del steps.WARNINGS[:]
+    os.environ['CAPITAL_RAW_LOG'] = os.path.join(cfg['workdir'], 'raw-output.log')
     if only is None:
         invalidate_changed(cfg, st, log)
         save_state(cfg['workdir'], st)
@@ -347,6 +357,12 @@ def build(cfg, log, start=None, only=None, to=None, st=None, stop_flag=lambda: F
         save_state(cfg['workdir'], st)
         log('[%s] done in %d s' % (stage['id'], time.time() - t0))
     progress(len(todo), len(todo), None)
+    if steps.WARNINGS:
+        log('')
+        log('=== %d warning(s): the build finished, but these things need your attention ===' % len(steps.WARNINGS))
+        for w in steps.WARNINGS:
+            log('  ! ' + w)
+        log('  (details: builder.log and raw-output.log in the work folder)')
     return True
 
 
@@ -406,7 +422,7 @@ def _fix_std_streams(argv):
                     setattr(sys, name, os.fdopen(msvcrt.open_osfhandle(h, os.O_WRONLY), 'w', encoding='utf-8', errors='replace'))
                 except Exception:
                     pass
-    if sys.stdout is None and argv and argv[:1] != ['--script']:
+    if sys.stdout is None and argv and argv[:1] != ['--script'] and not argv[0].lower().endswith('.py'):
         try:
             if k32.AttachConsole(-1):                               # ATTACH_PARENT_PROCESS: print into the terminal the user typed the command in
                 sys.stdout = open('CONOUT$', 'w', encoding='utf-8', errors='replace')
@@ -439,6 +455,8 @@ def cmd_uninstall(args):
 def main(argv):
     if getattr(sys, 'frozen', False):
         _fix_std_streams(argv)
+    if getattr(sys, 'frozen', False) and argv and argv[0].lower().endswith('.py') and os.path.isfile(argv[0]):
+        argv = ['--script'] + list(argv)                             # the pipeline scripts call sys.executable <script.py>: inside the packaged exe that means --script
     if argv[:1] == ['--script']:                                     # internal: run a pipeline script inside the bundled interpreter
         import runpy
         script = argv[1]
@@ -497,7 +515,8 @@ def main(argv):
         if any(lv == 'error' for lv, _ in problems) and not args['yes']:
             print('Fix the errors above first (or pass --yes to try anyway).')
             return 1
-        logf = open(os.path.join(cfg['workdir'], 'builder.log') if os.path.isdir(cfg['workdir']) else os.devnull, 'a', encoding='utf-8')
+        os.makedirs(cfg['workdir'], exist_ok=True)                      # a brand-new work folder used to get no builder.log at all
+        logf = open(os.path.join(cfg['workdir'], 'builder.log'), 'a', encoding='utf-8')
         def log(m):
             print(m, flush=True)
             logf.write(m + '\n'); logf.flush()
@@ -509,4 +528,18 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    try:
+        code = main(sys.argv[1:])
+    except SystemExit:
+        raise
+    except BaseException:                    # a windowed exe would show a blocking error dialog that nobody sees (stalled one tester for hours): print and exit instead
+        import traceback
+        traceback.print_exc()
+        try:
+            d = os.path.join(os.environ.get('LOCALAPPDATA') or os.path.expanduser('~'), 'CapitalConvert'); os.makedirs(d, exist_ok=True)
+            with open(os.path.join(d, 'crash.log'), 'a', encoding='utf-8') as cf:
+                cf.write('--- %s' % time.strftime('%Y-%m-%d %H:%M:%S') + chr(10) + traceback.format_exc() + chr(10))
+        except Exception:
+            pass
+        code = 1
+    sys.exit(code)

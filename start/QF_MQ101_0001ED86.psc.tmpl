@@ -1,0 +1,302 @@
+Scriptname Fragments:Quests:QF_MQ101_0001ED86 Extends Quest Hidden
+{Fallout 4-Ever: replaces the fragment script of the vanilla intro quest MQ101 (loose file, shadows the one in the game archives).
+Fallout 4 runs stage 0 item 01 at New Game (pre-war intro movie, mirror chargen, control lock). Here that item gives the engine the blank movie it waits for, moves the
+player outside Vault 101 and starts our start quest; every other fragment does nothing, so MQ101 is never advanced. Uninstalling the mod removes this file and restores
+the normal Fallout 4 start.}
+
+Function Fragment_Stage_0000_Item_00()
+EndFunction
+
+Function Fragment_Stage_0000_Item_01()
+	Debug.Trace("F4EVER fragment: New Game, MQ101 stage 0 item 1 runs")
+	; the engine waits for its new-game movie call: give it a 2-frame black Bink movie (a missing file would hang the load)
+	Game.PlayBink("F3Blank.bik", true, true, true, true, true)
+	; the movie alone leaves the loading screen waiting forever: move the player ourselves (same as the console command coc), to the spot outside the vault door
+	ObjectReference exitRef = Game.GetFormFromFile(@EXIT@, "Fallout3.esm") as ObjectReference
+	If exitRef != None
+		Game.GetPlayer().MoveTo(exitRef)
+	Else
+		Debug.CenterOnCell("Vault101Exterior")
+	EndIf
+	Quest q = Game.GetFormFromFile(@QSTART@, "CapitalStart.esp") as Quest
+	Debug.Trace("F4EVER fragment: start quest " + q)
+	If q != None
+		If !q.IsRunning()
+			q.Start()
+		EndIf
+		CapStartDemo cs = q as CapStartDemo
+		If cs != None
+			cs.StartTimer(1.5, 1)          ; the rest runs on its own thread: this fragment must return, the loading screen waits for it
+		EndIf
+	EndIf
+EndFunction
+
+Function Fragment_Stage_0000_Item_03()
+EndFunction
+
+Function Fragment_Stage_0000_Item_04()
+EndFunction
+
+Function Fragment_Stage_0010_Item_00()
+EndFunction
+
+Function Fragment_Stage_0012_Item_00()
+EndFunction
+
+Function Fragment_Stage_0015_Item_00()
+EndFunction
+
+Function Fragment_Stage_0018_Item_00()
+EndFunction
+
+Function Fragment_Stage_0022_Item_00()
+EndFunction
+
+Function Fragment_Stage_0030_Item_00()
+EndFunction
+
+Function Fragment_Stage_0063_Item_00()
+EndFunction
+
+Function Fragment_Stage_0065_Item_00()
+EndFunction
+
+Function Fragment_Stage_0070_Item_00()
+EndFunction
+
+Function Fragment_Stage_0075_Item_00()
+EndFunction
+
+Function Fragment_Stage_0080_Item_00()
+EndFunction
+
+Function Fragment_Stage_0085_Item_00()
+EndFunction
+
+Function Fragment_Stage_0090_Item_00()
+EndFunction
+
+Function Fragment_Stage_0092_Item_00()
+EndFunction
+
+Function Fragment_Stage_0093_Item_00()
+EndFunction
+
+Function Fragment_Stage_0095_Item_00()
+EndFunction
+
+Function Fragment_Stage_0097_Item_00()
+EndFunction
+
+Function Fragment_Stage_0100_Item_00()
+EndFunction
+
+Function Fragment_Stage_0110_Item_00()
+EndFunction
+
+Function Fragment_Stage_0120_Item_00()
+EndFunction
+
+Function Fragment_Stage_0200_Item_00()
+EndFunction
+
+Function Fragment_Stage_0210_Item_00()
+EndFunction
+
+Function Fragment_Stage_0220_Item_00()
+EndFunction
+
+Function Fragment_Stage_0230_Item_00()
+EndFunction
+
+Function Fragment_Stage_0240_Item_00()
+EndFunction
+
+Function Fragment_Stage_0245_Item_00()
+EndFunction
+
+Function Fragment_Stage_0247_Item_00()
+EndFunction
+
+Function Fragment_Stage_0250_Item_00()
+EndFunction
+
+Function Fragment_Stage_0252_Item_00()
+EndFunction
+
+Function Fragment_Stage_0260_Item_00()
+EndFunction
+
+Function Fragment_Stage_0263_Item_00()
+EndFunction
+
+Function Fragment_Stage_0270_Item_00()
+EndFunction
+
+Function Fragment_Stage_0300_Item_00()
+EndFunction
+
+Function Fragment_Stage_0305_Item_00()
+EndFunction
+
+Function Fragment_Stage_0310_Item_00()
+EndFunction
+
+Function Fragment_Stage_0400_Item_00()
+EndFunction
+
+Function Fragment_Stage_0402_Item_00()
+EndFunction
+
+Function Fragment_Stage_0405_Item_00()
+EndFunction
+
+Function Fragment_Stage_0410_Item_00()
+EndFunction
+
+Function Fragment_Stage_0440_Item_00()
+EndFunction
+
+Function Fragment_Stage_0450_Item_00()
+EndFunction
+
+Function Fragment_Stage_0455_Item_00()
+EndFunction
+
+Function Fragment_Stage_0460_Item_00()
+EndFunction
+
+Function Fragment_Stage_0465_Item_00()
+EndFunction
+
+Function Fragment_Stage_0470_Item_00()
+EndFunction
+
+Function Fragment_Stage_0480_Item_00()
+EndFunction
+
+Function Fragment_Stage_0490_Item_00()
+EndFunction
+
+Function Fragment_Stage_0495_Item_00()
+EndFunction
+
+Function Fragment_Stage_0496_Item_00()
+EndFunction
+
+Function Fragment_Stage_0497_Item_00()
+EndFunction
+
+Function Fragment_Stage_0500_Item_00()
+EndFunction
+
+Function Fragment_Stage_0505_Item_00()
+EndFunction
+
+Function Fragment_Stage_0510_Item_00()
+EndFunction
+
+Function Fragment_Stage_0515_Item_00()
+EndFunction
+
+Function Fragment_Stage_0530_Item_00()
+EndFunction
+
+Function Fragment_Stage_0600_Item_00()
+EndFunction
+
+Function Fragment_Stage_0620_Item_00()
+EndFunction
+
+Function Fragment_Stage_0620_Item_01()
+EndFunction
+
+Function Fragment_Stage_0625_Item_00()
+EndFunction
+
+Function Fragment_Stage_0630_Item_00()
+EndFunction
+
+Function Fragment_Stage_0632_Item_00()
+EndFunction
+
+Function Fragment_Stage_0635_Item_00()
+EndFunction
+
+Function Fragment_Stage_0646_Item_00()
+EndFunction
+
+Function Fragment_Stage_0647_Item_00()
+EndFunction
+
+Function Fragment_Stage_0648_Item_00()
+EndFunction
+
+Function Fragment_Stage_0649_Item_00()
+EndFunction
+
+Function Fragment_Stage_0670_Item_00()
+EndFunction
+
+Function Fragment_Stage_0675_Item_00()
+EndFunction
+
+Function Fragment_Stage_0680_Item_00()
+EndFunction
+
+Function Fragment_Stage_0685_Item_00()
+EndFunction
+
+Function Fragment_Stage_0690_Item_00()
+EndFunction
+
+Function Fragment_Stage_0700_Item_00()
+EndFunction
+
+Function Fragment_Stage_0705_Item_00()
+EndFunction
+
+Function Fragment_Stage_0710_Item_00()
+EndFunction
+
+Function Fragment_Stage_0720_Item_00()
+EndFunction
+
+Function Fragment_Stage_0730_Item_00()
+EndFunction
+
+Function Fragment_Stage_0750_Item_00()
+EndFunction
+
+Function Fragment_Stage_0752_Item_00()
+EndFunction
+
+Function Fragment_Stage_0753_Item_00()
+EndFunction
+
+Function Fragment_Stage_0755_Item_00()
+EndFunction
+
+Function Fragment_Stage_0760_Item_00()
+EndFunction
+
+Function Fragment_Stage_0770_Item_00()
+EndFunction
+
+Function Fragment_Stage_0780_Item_00()
+EndFunction
+
+Function Fragment_Stage_0805_Item_00()
+EndFunction
+
+Function Fragment_Stage_0810_Item_00()
+EndFunction
+
+Function Fragment_Stage_0900_Item_00()
+EndFunction
+
+Function Fragment_Stage_1000_Item_00()
+EndFunction
+
+Function Fragment_Stage_5000_Item_00()
+EndFunction

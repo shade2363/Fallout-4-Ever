@@ -1,0 +1,48 @@
+Scriptname CapStartDemo extends Quest
+{Fallout 4-Ever: New Game start. The replacement MQ101 fragment moves the player outside Vault 101 and starts this quest. Once the world around the player is loaded this
+script gives the Pip-Boy, completes the "Escape!" quest, then opens the character editor and the SPECIAL screen (one after the other).}
+
+Bool Property Done Auto
+
+Event OnTimer(int aiTimerID)
+	If aiTimerID != 1 || Done
+		return
+	EndIf
+	Actor player = Game.GetPlayer()
+	If !player.Is3DLoaded()
+		StartTimer(1.0, 1)                 ; still in the loading screen
+		return
+	EndIf
+	Done = True
+	Debug.Trace("F4EVER start: the player is outside Vault 101, finishing the setup")
+	Game.FadeOutGame(False, True, 0.0, 1.0)          ; the new-game intro fades the screen out; its own script (replaced) would fade it back in
+	Form pip = Game.GetFormFromFile(@PIPBOY@, "Fallout4.esm")
+	If pip != None
+		If player.GetItemCount(pip) < 1          ; the player record may already carry one
+			player.AddItem(pip, 1, True)
+		EndIf
+		player.EquipItem(pip, False, True)
+	EndIf
+	Quest esc = Game.GetFormFromFile(@QESC@, "CapitalStart.esp") as Quest
+	If esc != None
+		esc.Start()
+		esc.SetObjectiveDisplayed(10, True, True)
+		esc.SetObjectiveCompleted(10, True)
+		esc.CompleteQuest()
+		Debug.Trace("F4EVER start: Escape! completed " + esc.IsCompleted())
+	EndIf
+	RegisterForMenuOpenCloseEvent("LooksMenu")
+	Game.ShowRaceMenu()
+EndEvent
+
+Event OnMenuOpenCloseEvent(string asMenuName, bool abOpening)
+	If asMenuName == "LooksMenu" && !abOpening
+		UnregisterForMenuOpenCloseEvent("LooksMenu")
+		RegisterForMenuOpenCloseEvent("SPECIALMenu")
+		Debug.Trace("F4EVER start: character editor closed, opening SPECIAL")
+		Game.ShowSPECIALMenu()
+	ElseIf asMenuName == "SPECIALMenu" && !abOpening
+		UnregisterForMenuOpenCloseEvent("SPECIALMenu")
+		Debug.Trace("F4EVER start: SPECIAL closed, the player is free")
+	EndIf
+EndEvent
