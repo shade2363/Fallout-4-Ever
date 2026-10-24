@@ -1,7 +1,7 @@
 """Stage steps that are more than "run one script".  Each takes (cfg, log, *args); cfg has workdir / fo4 / fo3_data.
 Everything here mirrors the manual procedure in README.md; nothing writes into the Fallout 3 install and the Fallout 4 install is only touched by
 the prepare stage (CreationKit.ini, with a .bak) and the install stage."""
-import glob, os, re, shutil, subprocess, sys
+import glob, os, re, shutil, struct, subprocess, sys
 from stages import FO3_PLUGINS
 
 PY = None
@@ -18,15 +18,15 @@ def _py(cfg):
     return [sys.executable, '--script'] if getattr(sys, 'frozen', False) else [sys.executable]
 
 
-def _run(cmd, cwd, log, env=None, tolerate=False, collect=None):
+def _run(cmd, cwd, log, env=None, tolerate=False, collect=None, only=None):
     """runs a helper program; its output goes through LogFilter (millions of converter lines become a few progress lines, the full text goes to raw-output.log);
-    collect = a list that receives every raw line (to look for results)"""
+    collect = a list that receives every raw line (to look for results), or with only=(text, ...) just the lines that contain one of those texts"""
     from logfilter import LogFilter
     log('    $ ' + ' '.join(cmd))
     p = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000 if os.name == 'nt' else 0)
     flt = LogFilter(os.environ.get('CAPITAL_RAW_LOG'))
     for line in p.stdout:
-        if collect is not None:
+        if collect is not None and (only is None or any(s in line for s in only)):
             collect.append(line.rstrip())
         for shown in flt.feed(line):
             log('      ' + shown.strip() if shown.startswith('      ') else '      ' + shown)
@@ -108,7 +108,56 @@ def _libs():
 
 
 # --------------------------------------------------------------------------------------------------------------------------------
+XCONVERT_ERRORS = ('Unexpected Error', 'EAccessViolation', 'A file of that name exists already')       # xConvert prints these and still exits with 0
+
+
+def plugin_masters(path):
+    """master names of a plugin, read from its TES4 header, or None when the file is missing, not a plugin or cut short"""
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(24)
+            if len(head) < 24 or head[:4] != b'TES4':
+                return None
+            size = struct.unpack_from('<I', head, 4)[0]
+            data = f.read(size)
+    except OSError:
+        return None
+    if len(data) < size:
+        return None
+    masters, p = [], 0
+    while p + 6 <= len(data):
+        sz = struct.unpack_from('<H', data, p + 4)[0]
+        if data[p:p + 4] == b'MAST':
+            masters.append(data[p + 6:p + 6 + sz].rstrip(b'\0').decode('latin1'))
+        p += 6 + sz
+    return masters
+
+
+def plugin_complete(path):
+    """True when the top-level records and groups of the plugin add up exactly to the file size: a conversion that was killed while writing is not complete"""
+    if plugin_masters(path) is None:
+        return False
+    try:
+        total = os.path.getsize(path)
+        with open(path, 'rb') as f:
+            p = 0
+            while p < total:
+                f.seek(p)
+                head = f.read(24)
+                if len(head) < 24:
+                    return False
+                size = struct.unpack_from('<I', head, 4)[0]
+                p += size if head[:4] == b'GRUP' else 24 + size              # a group's size includes its own 24-byte header, a record's does not
+    except OSError:
+        return False
+    return p == total
+
+
 def convert_plugins(cfg, log):
+    """Fallout3.esm is fed to xConvert as FalloutNV.esm, the DLC plugins are patched to name it as their master, xConvert converts each one into lab/Data, and the
+    result gets Fallout3.esm back as its master.  Safe to run again after any stop: a finished output is kept, anything else is removed first (xConvert will not
+    overwrite a file: it prints 'A file of that name exists already', crashes and still exits with 0, and the next step then failed with "Master FalloutNV.esm not
+    found" on a plugin that had been renamed on an earlier run)."""
     wd, fo3 = cfg['workdir'], cfg['fo3_data']
     fnv_data = os.path.join(wd, 'lab', 'fnv', 'Data')
     conv = os.path.join(wd, 'tool', 'build', 'xedit_converter', 'xConvert.exe')
@@ -124,24 +173,35 @@ def convert_plugins(cfg, log):
         if name != 'Fallout3':
             _run(ps + [os.path.join(wd, 'rename-master.ps1'), '-Plugin', dst, '-From', 'Fallout3.esm', '-To', 'FalloutNV.esm'], wd, log)
     for name in FO3_PLUGINS:
-        if not os.path.exists(os.path.join(fo3, name + '.esm')):
+        src = os.path.join(fo3, name + '.esm')
+        if not os.path.exists(src):
             continue
         arg = 'FalloutNV.esm' if name == 'Fallout3' else name + '.esm'
-        out = os.path.join(wd, 'lab', 'Data', arg)
-        inp = os.path.join(fnv_data, arg)
+        out = os.path.join(wd, 'lab', 'Data', arg)                      # a DLC plugin is converted straight into its final name: out and final are the same file
         final = os.path.join(wd, 'lab', 'Data', name + '.esm')
-        if os.path.exists(out) and os.path.getmtime(out) > os.path.getmtime(inp):
+        # finished = complete on disk and newer than the Fallout 3 file it came from (the patched copy that xConvert reads is rewritten on every run, so its time says nothing)
+        if os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(src) and plugin_complete(out):
             log('  %s already converted (%d MB): not converting again' % (name, os.path.getsize(out) // 1048576))
         else:
+            if os.path.exists(out):
+                log('  %s: removing the earlier output (it is older than the game file or was cut short): xConvert does not overwrite files' % os.path.basename(out))
+                os.remove(out)
             log('  converting %s (the base world takes about 50 min and ~20 GB RAM)' % name)
-            _run([conv, arg], os.path.join(wd, 'lab', 'fnv'), log)
-            if not os.path.exists(out):
-                raise RuntimeError('xConvert produced no %s' % out)
+            bad = []
+            _run([conv, arg], os.path.join(wd, 'lab', 'fnv'), log, collect=bad, only=XCONVERT_ERRORS)
+            if bad:
+                raise RuntimeError('xConvert failed on %s: %s (details: raw-output.log in the work folder)' % (arg, bad[-1].strip()[:300]))
+            if not os.path.exists(out) or not plugin_complete(out):
+                raise RuntimeError('xConvert produced no complete %s' % out)
         if name == 'Fallout3':
             shutil.copy2(out, final)            # the base plugin was fed in as FalloutNV.esm; its output has no FalloutNV master to rename
             log('  Fallout3.esm written (%d MB)' % (os.path.getsize(final) // 1048576))
         else:
-            _run(ps + [os.path.join(wd, 'rename-master.ps1'), '-Plugin', out, '-From', 'FalloutNV.esm', '-To', 'Fallout3.esm', '-Out', final], wd, log)
+            masters = plugin_masters(out) or []
+            if 'FalloutNV.esm' not in masters and 'Fallout3.esm' in masters:
+                log('  %s already points at Fallout3.esm: nothing to rename' % os.path.basename(out))
+            else:
+                _run(ps + [os.path.join(wd, 'rename-master.ps1'), '-Plugin', out, '-From', 'FalloutNV.esm', '-To', 'Fallout3.esm', '-Out', final], wd, log)
     log('  converted plugins are in lab/Data (the world-fix stage reads them from there)')
 
 

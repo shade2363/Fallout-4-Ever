@@ -4,6 +4,11 @@
 Fixes from the second outside test. Save compatibility: **existing saves may break: start a new save** (the five DLC plugins gain 160 placed objects, 66 meshes that were missing now
 exist, and the plugin list is replaced by a clean one). A build of this version is a pre-release without a signed update manifest: the *Updates* button does not offer it; download the zip
 from the Releases page instead.
+* **Step 3 (convert the plugins) can be run again.** After any stop or failure after the first DLC plugin was converted, the next run failed with
+  `Master FalloutNV.esm not found in ...\lab\Data\Anchorage.esm`: the converted DLC plugin is already the final file, xConvert refuses to overwrite it (it prints "A file of that name
+  exists already", crashes and still exits with 0, which the build ignored), and the rename step then looked for a master that an earlier run had already renamed. A finished output is
+  now recognised (complete on disk and newer than the Fallout 3 file) and kept; an unfinished or older one is removed before xConvert runs; xConvert's errors stop the step with the real
+  message; and `rename-master.ps1` accepts a plugin whose master is already the new name. This also makes the upgrade from 0.2.0 in the same work folder work.
 * **Mesh optimizer (Elric) no longer crashes.** The cause was found: Elric dies on a mesh whose collision points at a rigid body that has no shape. All 49 meshes that crashed it
   (36 Fallout 3 ones: hats, helmets, glasses, the baby carriage, the Tranquility pod, the metro door, the vault overseer desks ...; 13 DLC ones: the Anchorage mine, the Pitt cart,
   the Broken Steel stage, Tesla coil and water barrel, the Point Lookout ferris wheel and coffins, the Zeta machine, rubble and globe) have such a body, and none of 150 meshes picked

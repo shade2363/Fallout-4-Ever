@@ -69,7 +69,7 @@
   },
   {
    "path": "builder/steps.py",
-   "sha256": "68c79b236b6af94836a798892d12a03f3c122a5188392140f3ba14872d5ef108",
+   "sha256": "b1cee66436d6484073b22b822c1fd18d8c5ba1fe09cea4afd62c8393ffe98061",
    "origin": "dev",
    "dev_sha256": "767ca9b867b4c6fa4233626287892dfffd02600eff68192507ed007ef6acf63c"
   },
@@ -149,8 +149,9 @@
   },
   {
    "path": "rename-master.ps1",
-   "sha256": "cf36835a3339de01ad92e4b0d880cf822ef8248e05b5faa7899af54966c40abd",
-   "origin": "dev"
+   "sha256": "3f48b0887b45a233f886b7e73a9c44fb41fc5a4937b44f67fd31d2a97b6db5b6",
+   "origin": "dev",
+   "dev_sha256": "cf36835a3339de01ad92e4b0d880cf822ef8248e05b5faa7899af54966c40abd"
   },
   {
    "path": "start/CapStartDemo.psc.tmpl",
