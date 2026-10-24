@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
-Fixes from the second outside test (2026-10-24). Save compatibility: not decided yet (decide it at release time: the five DLC plugins gain 160 placed objects and 66 meshes
-that used to be missing now exist, so a new game is the safe choice).
+## 0.2.1 (2026-10-24)
+Fixes from the second outside test. Save compatibility: **existing saves may break: start a new save** (the five DLC plugins gain 160 placed objects, 66 meshes that were missing now
+exist, and the plugin list is replaced by a clean one). A build of this version is a pre-release without a signed update manifest: the *Updates* button does not offer it; download the zip
+from the Releases page instead.
 * **Mesh optimizer (Elric) no longer crashes.** The cause was found: Elric dies on a mesh whose collision points at a rigid body that has no shape. All 49 meshes that crashed it
   (36 Fallout 3 ones: hats, helmets, glasses, the baby carriage, the Tranquility pod, the metro door, the vault overseer desks ...; 13 DLC ones: the Anchorage mine, the Pitt cart,
   the Broken Steel stage, Tesla coil and water barrel, the Point Lookout ferris wheel and coffins, the Zeta machine, rubble and globe) have such a body, and none of 150 meshes picked
