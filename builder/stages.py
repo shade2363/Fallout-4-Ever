@@ -100,7 +100,7 @@ for _s in STAGES:
 # New Game start: outside Vault 101 with the Escape! quest completed (start/build_start.py builds CapitalStart.esp and compiles two scripts with your Creation Kit compiler)
 _start = dict(id='16-start', title='New Game start: outside Vault 101, Escape! completed (CapitalStart.esp)', eta='1 min',
               steps=[('py', 'start/build_start.py', '--conv', '{wd}/tool/output/Fallout3.esm', '--fo4', '{fo4}', '--out', '{wd}/tool/output/CapitalStart.esp',
-                      '--src', '{wd}/scripts/src', '--scripts-out', '{wd}/scripts/out')],
+                      '--src', '{wd}/scripts/src', '--scripts-out', '{wd}/scripts/out', '--special', '{special}')],         # {special}: screen (default) or default, see --no-special-screen
               requires=['{wd}/tool/output/Fallout3.esm', '{fo4}/Papyrus Compiler/PapyrusCompiler.exe'],
               produces=['{wd}/tool/output/CapitalStart.esp', '{wd}/scripts/out/CapStartDemo.pex'])
 STAGES.insert([_s['id'] for _s in STAGES].index('18-install'), _start)

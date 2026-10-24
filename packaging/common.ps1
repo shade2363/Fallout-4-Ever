@@ -39,6 +39,20 @@ function Get-Fo3Data {
   return $null
 }
 
+# Runs one of our python scripts and returns its exit code (its output goes to the host). The packaged program has no python on the PATH: it runs scripts itself
+# ("CapitalConvert.exe --script file.py ...") and tells the PowerShell steps how through CAPITAL_PY (+ CAPITAL_PY_ARGS); a source checkout uses the python on the PATH.
+function Invoke-CapitalPy([string]$Script, [string[]]$ScriptArgs = @()) {
+  if ($env:CAPITAL_PY) {
+    $pre = @(); if ($env:CAPITAL_PY_ARGS) { $pre = @($env:CAPITAL_PY_ARGS) }
+    & $env:CAPITAL_PY @pre $Script @ScriptArgs | ForEach-Object { Write-Host $_ }
+  } else {
+    $py = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $py) { throw 'python was not found: run this through CapitalConvert.exe, or install Python 3 when working from a source checkout.' }
+    & $py.Source -I $Script @ScriptArgs | ForEach-Object { Write-Host $_ }
+  }
+  return $LASTEXITCODE
+}
+
 function Get-Archive2Path([string]$Override) {
   if ($Override) { if (Test-Path $Override) { return $Override } else { throw "Archive2.exe not found at $Override" } }
   if ($env:ARCHIVE2_EXE -and (Test-Path $env:ARCHIVE2_EXE)) { return $env:ARCHIVE2_EXE }

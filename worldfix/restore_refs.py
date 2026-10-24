@@ -5,7 +5,7 @@ Dropped refs fall in three groups, restored here:
   * Markers (XMarker 0x3B / XMarkerHeading 0x34, same ids in FO4): ~6,200 refs that scripts use as MoveTo / package targets
   * Bottle caps  (source base 0x0F 'Caps001'):   re-based on Fallout 4's Caps001 (0x0000000F)
   * Any ref whose base object WAS converted (statics, doors, containers ... ~220 refs in cells that failed to convert): copied with NAME/DATA/XSCL/EDID/XTEL
-Everything else (XMarkers, room/collision/radiation markers, sound emitters, effects) is skipped on purpose.
+Everything else (XMarkers, room/collision/radiation markers, sound emitters, effects) is skipped on purpose, and the log counts it by reason (ref_reasons.py).
 
   python restore_refs.py --src <FO3 Fallout3.esm> --in <converted esm> --out <esm with refs restored>
 Each restored ref keeps its source FormID (low 24 bits, master index 01); flags keep Persistent (0x400) / Initially Disabled (0x800);
@@ -13,6 +13,9 @@ persistent refs go in the cell's persistent-children group (8), others in tempor
 import argparse, collections, math, struct, sys
 sys.path.insert(0, r'X:\__CAPITAL_WORKDIR__\navmesh')
 from navlib import iter_records, subrecords, sub
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ref_reasons
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--src', required=True); ap.add_argument('--in', dest='inp', required=True); ap.add_argument('--out', required=True)
@@ -29,10 +32,8 @@ for r in iter_records(dc):
         conv_base[r.fid & 0xFFFFFF] = r.sig
 conv_ids = {r.fid & 0xFFFFFF for r in iter_records(dc)}
 SKIP_BASE_NAMES = ('xmarker', 'collisionmarker', 'roommarker', 'radiationmarker', 'cocmarker', 'portalmarker', 'planemarker', 'multiboundmarker')
-src_edid = {}
-for r in iter_records(ds):
-    if r.sig == 'STAT':
-        src_edid[r.fid] = dict(subrecords(ds, r)).get('EDID', bytes(1)).rstrip(bytes(1)).decode('latin1')
+src_info = ref_reasons.index_bases(ds)           # (signature, editor id, model) of every base record: names the reason a ref cannot be put back
+src_edid = {fid: v[1] for fid, v in src_info.items() if v[0] == 'STAT'}
 
 def build_ref(r):
     """-> (record bytes, group type) or (None, reason)"""
@@ -73,7 +74,7 @@ def build_ref(r):
         if 'XSCL' in subs:
             out.append(sub('XSCL', subs['XSCL']))
     else:
-        return None, 'base not converted'
+        return None, ref_reasons.reason(src_info.get(base), base)       # editor marker / ambient sound / ambient effect / water plane ...: see ref_reasons.py
     if 'EDID' in subs:
         out.insert(0, sub('EDID', subs['EDID']))
     out.append(sub('DATA', subs['DATA']))

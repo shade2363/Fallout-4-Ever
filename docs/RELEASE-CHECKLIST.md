@@ -5,6 +5,7 @@ Nothing is published until every box is ticked. Do the steps in order.
 ## Before building
 - [ ] `python -m unittest discover -s tests -v` passes (updates, change detection, detection).
 - [ ] `python tools/leak_scan.py` passes on the repo (0 problems).
+- [ ] `python tools/verify_manifest.py` says the repository matches `SYNC-MANIFEST.json` (after editing a payload file: `--update`); after building the exe, `python tools/verify_manifest.py --root dist\CapitalConvert\_internal\payload` says the same of the packaged payload.
 - [ ] `powershell -File tools\sandbox_install_test.ps1 -Work <finished work folder>` prints ALL PASSED (installs into a throw-away folder, reinstalls, uninstalls, proves nothing of ours or of someone else's is left or lost). Run it on the build and again on the copy downloaded from the release page.
 - [ ] After building the exe: `python tools/smoke_exe.py` prints ALL PASSED (runs the PACKAGED exe in a fresh work folder: tool list, downloads, a step, update-check offline, uninstall preview, window). Run it after every packaging change; a source run does not prove the exe works.
 - [ ] `builder/version.py`: `VERSION` bumped. `STEPS_REV` bumped **only** if the built-in steps in `builder/steps.py` now produce something different.

@@ -289,6 +289,62 @@ def total_ram_gb():
         return -1
 
 
+def prefs_ini_path():
+    """Documents\\My Games\\Fallout4\\Fallout4Prefs.ini (the Documents folder may have been moved: ask Windows)"""
+    try:
+        import ctypes
+        buf = ctypes.create_unicode_buffer(260)
+        ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buf)          # CSIDL_PERSONAL
+        docs = buf.value
+    except Exception:
+        docs = ''
+    return os.path.join(docs or os.path.join(os.path.expanduser('~'), 'Documents'), 'My Games', 'Fallout4', 'Fallout4Prefs.ini')
+
+
+def desktop_size():
+    """size of the main screen in real pixels (not the scaled size a program without DPI support is told), or None"""
+    try:
+        import ctypes
+        dc = ctypes.windll.user32.GetDC(0)
+        w, h = ctypes.windll.gdi32.GetDeviceCaps(dc, 118), ctypes.windll.gdi32.GetDeviceCaps(dc, 117)          # DESKTOPHORZRES, DESKTOPVERTRES
+        ctypes.windll.user32.ReleaseDC(0, dc)
+        return (w, h) if w > 0 and h > 0 else None
+    except Exception:
+        return None
+
+
+def _ini_value(text, section, key):
+    sec = None
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith('[') and s.endswith(']'):
+            sec = s[1:-1].strip().lower()
+        elif sec == section.lower() and '=' in s and s.split('=', 1)[0].strip().lower() == key.lower():
+            return s.split('=', 1)[1].strip()
+    return None
+
+
+def oversize_window_warning(prefs=None, screen=None):
+    """a sentence when Fallout 4 is set to a window larger than the screen, else None.  In that case parts of the game, for example the Done button of the SPECIAL screen at
+    New Game, are off screen and cannot be clicked (the keyboard does not reach that button), and the player stays stuck behind the screen"""
+    path = prefs or prefs_ini_path()
+    screen = screen or desktop_size()
+    if not screen:
+        return None
+    try:
+        with open(path, encoding='utf-8', errors='replace') as f:
+            text = f.read()
+        w, h = int(_ini_value(text, 'Display', 'iSize W')), int(_ini_value(text, 'Display', 'iSize H'))
+        full = _ini_value(text, 'Display', 'bFull Screen')
+    except (OSError, TypeError, ValueError):
+        return None
+    if full == '1' or (w <= screen[0] and h <= screen[1]):
+        return None
+    return ('Fallout 4 is set to a %dx%d window but your screen is %dx%d: part of the game window is off screen. At New Game the Done button of the SPECIAL screen cannot be '
+            'clicked then and you stay stuck behind it. Lower "iSize W" / "iSize H" in %s (or use full screen) before you start a New Game, or build with --no-special-screen.'
+            % (w, h, screen[0], screen[1], path))
+
+
 if __name__ == '__main__':
     fo4, fo3 = find_fo4(), find_fo3_data()
     facts, problems = inspect_install(fo4, fo3)

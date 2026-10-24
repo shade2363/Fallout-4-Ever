@@ -87,6 +87,45 @@ class StartTests(unittest.TestCase):
         self.assertIn('Game.FadeOutGame(False, True', qs)
         self.assertIn('GetItemCount(pip) < 1', qs)
 
+    def quest_script(self, special):
+        files = NS['write_sources'](os.path.join(self.tmp, 'src_' + special), special)
+        with open(files['CapStartDemo.psc.tmpl'], encoding='utf-8') as f:
+            return f.read()
+
+    def test_the_special_screen_is_the_default(self):
+        qs = self.quest_script('screen')
+        self.assertIn('Game.ShowSPECIALMenu()', qs)
+        self.assertIn('RegisterForMenuOpenCloseEvent("SPECIALMenu")', qs)
+        self.assertNotIn('\tGiveDefaultStats()', qs)                  # the helper exists but is never called
+        with open(NS['write_sources'](os.path.join(self.tmp, 'again'))['CapStartDemo.psc.tmpl'], encoding='utf-8') as f:
+            self.assertEqual(qs, f.read())                             # no argument = 'screen'
+
+    def test_no_special_screen_gives_default_stats_instead(self):
+        qs = self.quest_script('default')
+        self.assertNotIn('Game.ShowSPECIALMenu()', qs)
+        self.assertIn('\t\tGiveDefaultStats()', qs)
+        # the seven consecutive actor values Strength .. Luck of Fallout4.esm, 4 each = the 28 points the screen hands out
+        self.assertIn('Game.GetFormFromFile(%d + i, "Fallout4.esm") as ActorValue' % NS['SPECIAL_AV'], qs)
+        self.assertIn('While i < 7', qs)
+        self.assertIn('player.SetValue(av, 4.0)', qs)
+        self.assertIsNone(re.search(r'@[A-Z0-9]+@', qs))
+
+    def test_both_variants_keep_the_rest_of_the_script(self):
+        a, b = self.quest_script('screen'), self.quest_script('default')
+        for must in ('Game.FadeOutGame(False, True', 'GetItemCount(pip) < 1', 'esc.CompleteQuest()', 'Game.ShowRaceMenu()', 'F4EVER start: character editor closed'):
+            self.assertIn(must, a)
+            self.assertIn(must, b)
+
+    def test_unknown_special_mode_is_refused(self):
+        with self.assertRaises(SystemExit):
+            NS['write_sources'](os.path.join(self.tmp, 'x'), 'maybe')
+
+    def test_the_build_step_passes_the_choice(self):
+        sys.path.insert(0, os.path.join(ROOT, 'builder'))
+        from stages import STAGES
+        step = next(s for s in STAGES if s['id'] == '16-start')['steps'][0]
+        self.assertEqual(step[-2:], ('--special', '{special}'))
+
     def test_no_game_text_in_our_scripts(self):
         # the only words shown to the player are our own: quest name, objective, log line
         text = open(os.path.join(ROOT, 'start', 'build_start.py'), encoding='utf-8').read()

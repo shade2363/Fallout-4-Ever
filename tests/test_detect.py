@@ -116,6 +116,38 @@ class DetectTests(unittest.TestCase):
         facts, problems = detect.inspect_install(None, None)
         self.assertEqual(len([p for p in problems if p[0] == 'error']), 2)
 
+    # ---- a game window larger than the screen: the SPECIAL screen's Done button is off screen and the player stays stuck behind it
+    def prefs(self, w, h, full=0, borderless=1):
+        p = os.path.join(self.tmp, 'Fallout4Prefs.ini')
+        with open(p, 'w') as f:
+            f.write('[Display]\r\niSize H=%d\r\nbFull Screen=%d\r\niSize W=%d\r\nbBorderless=%d\r\n[Launcher]\r\nbEnableFileSelection=0\r\n' % (h, full, w, borderless))
+        return p
+
+    def test_window_larger_than_the_screen_is_a_warning(self):
+        msg = detect.oversize_window_warning(self.prefs(2560, 1440), (1920, 1080))
+        self.assertIn('2560x1440', msg)
+        self.assertIn('1920x1080', msg)
+        self.assertIn('SPECIAL', msg)
+        self.assertIn('--no-special-screen', msg)
+
+    def test_a_window_that_fits_is_no_problem(self):
+        self.assertIsNone(detect.oversize_window_warning(self.prefs(1920, 1080), (1920, 1080)))
+        self.assertIsNone(detect.oversize_window_warning(self.prefs(1280, 720), (2560, 1440)))
+
+    def test_only_one_side_too_big_is_enough(self):
+        self.assertIsNotNone(detect.oversize_window_warning(self.prefs(1920, 1200), (1920, 1080)))
+        self.assertIsNotNone(detect.oversize_window_warning(self.prefs(2560, 1080), (1920, 1080)))
+
+    def test_full_screen_picks_a_mode_the_screen_supports(self):
+        self.assertIsNone(detect.oversize_window_warning(self.prefs(2560, 1440, full=1), (1920, 1080)))
+
+    def test_no_prefs_file_or_no_screen_size_is_silent(self):
+        self.assertIsNone(detect.oversize_window_warning(os.path.join(self.tmp, 'missing.ini'), (1920, 1080)))
+        self.assertIsNone(detect.oversize_window_warning(self.prefs(2560, 1440), None) if detect.desktop_size() is None else None)
+        with open(os.path.join(self.tmp, 'bad.ini'), 'w') as f:
+            f.write('[Display]\r\niSize W=wide\r\n')
+        self.assertIsNone(detect.oversize_window_warning(os.path.join(self.tmp, 'bad.ini'), (1920, 1080)))
+
 
 if __name__ == '__main__':
     unittest.main()

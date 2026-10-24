@@ -271,13 +271,30 @@ def sounds_placeholder(cfg, log):
     log('  empty CapitalSounds.esp written (placeholder until the audio stage exists)')
 
 
+def _elric_failures(cfg):
+    """meshes the bulk Elric pass gave up on, from elric-failures.txt (lines: plugin <TAB> meshes\\new_vegas\\<path>): the paths below meshes/new_vegas, lower case, forward slashes"""
+    p = os.path.join(cfg['workdir'], 'elric-failures.txt')
+    rels = set()
+    if os.path.isfile(p):
+        with open(p, encoding='utf-8', errors='replace') as f:
+            for line in f:
+                parts = line.rstrip('\r\n').split('\t')
+                if len(parts) == 2:
+                    rel = parts[1].replace('\\', '/').lower()
+                    i = rel.find('meshes/new_vegas/')
+                    if i >= 0:
+                        rels.add(rel[i + len('meshes/new_vegas/'):])
+    return sorted(rels)
+
+
 def meshes(cfg, log):
     """loose meshes: keyframed-collision fixes, animated doors, meshes the bulk conversion skipped, terminal hybrids (+ turning the placed terminals)"""
     wd = cfg['workdir']
     py = _py(cfg)
     out = os.path.join(wd, 'tool', 'output')
     _run(py + [os.path.join(wd, 'worldfix', 'scan_animated_nifs.py'), '--out', os.path.join(out, 'loose')], wd, log)
-    _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
+    door_lines = []
+    _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log, collect=door_lines)
     audit = os.path.join(wd, 'lab', 'audit.txt')
     os.makedirs(os.path.dirname(audit), exist_ok=True)
     with open(audit, 'w', encoding='utf-8') as f:
@@ -290,16 +307,42 @@ def meshes(cfg, log):
     ok = sum(1 for l in lines if l.startswith('OK '))
     absent = sum(1 for l in lines if l.startswith('ABSENT '))
     bad = [l for l in lines if l.startswith('FAIL ')]
-    log('  mesh repair: %d converted, %d are missing in Fallout 3 itself (nothing to convert), %d could not be converted' % (ok, absent, len(bad)))
+    log('  mesh repair: %d converted, %d are not in any Fallout 3 archive (nothing to convert), %d could not be converted' % (ok, absent, len(bad)))
+    if absent:
+        gone = sorted({l[len('ABSENT'):].split(' | ')[0].strip() for l in lines if l.startswith('ABSENT')})
+        with open(os.path.join(wd, 'missing-in-fallout3.txt'), 'w', encoding='utf-8') as f:
+            f.write('\n'.join(gone) + '\n')
+        log('  %d meshes are named by the Fallout 3 plugins but were never shipped in any Fallout 3 archive (test, effect and unused meshes): the original game shows nothing '
+            'for them either. List: missing-in-fallout3.txt' % len(gone))
     if bad:
         _warn(cfg, '%d meshes could not be converted and stay missing (see raw-output.log): the objects that use them are invisible in the game' % len(bad))
-    # the doors Elric crashes on (reported 'model missing from archives' by build_door_anims): convert them one by one, then give them their animation
-    for rel, extra in (('dungeons/metro/exterior/metrotunneltransdoorload01.nif', ['--no-collision']), ('dungeons/vault/halls/vdoor01.nif', []),
-                       ('dungeons/vaultruined/doors/vdoorr01.nif', [])):
+    # meshes Elric could still not optimize in the bulk pass (elric-failures.txt; normally empty: worldfix/elric_prep.py removes the cause): one by one, with their own repair
+    redo = _elric_failures(cfg)
+    still = []
+    for rel in redo:
+        if os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
+            continue
+        rc = _run(py + [os.path.join(wd, 'worldfix', 'convert_single_mesh.py'), rel], wd, log, tolerate=True)
+        if rc != 0:
+            still.append(rel)
+    if redo:
+        log('  meshes the bulk optimizer skipped: %d, repaired one by one: %d' % (len(redo), len(redo) - len(still)))
+    if still:
+        _warn(cfg, '%d meshes could not be optimized by Elric even on their own (elric-failures.txt) and are missing in the game: %s' % (len(still), ', '.join(still[:5]) + (' ...' if len(still) > 5 else '')))
+    # doors whose model build_door_anims could not find (neither in the converted archives nor loose): convert those one by one, then give them their animation.
+    # With elric_prep.py the doors go through the bulk pass like every other mesh, so this normally has nothing to do.
+    fix_doors = []
+    for l in door_lines:
+        fix_doors += re.findall(r"\('missing', 'meshes/new_vegas/(.+?)'\)", l)
+    for rel in sorted(set(fix_doors)):
+        if os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
+            continue                                     # the repair above already made it
+        extra = ['--no-collision'] if rel.endswith('metrotunneltransdoorload01.nif') else []
         rc = _run(py + [os.path.join(wd, 'worldfix', 'convert_single_mesh.py'), rel] + extra, wd, log, tolerate=True)
         if rc != 0 or not os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
             _warn(cfg, 'the door mesh %s was not repaired: that door will not animate properly (Vault 101 door, metro doors)' % rel)
-    _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
+    if fix_doors:                                       # build_door_anims reads loose models too: this second pass animates the doors that were just repaired
+        _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'add_terminal_hybrid.py')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'fix_terminal_refs.py'), '--delta', '-90'], wd, log)
 

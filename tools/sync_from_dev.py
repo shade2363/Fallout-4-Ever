@@ -5,9 +5,10 @@
 Scope (demo = world + actors + navmesh): the entry scripts below plus everything they reference (python imports and file names mentioned in
 text), found by following references inside the dev tree. Nothing else is copied.  Third-party programs (tool/, xEdit, Papyrus compiler,
 Archive2 ...) and anything derived from Bethesda data are NEVER copied: they are fetched or built on the user's PC.
-Writes SYNC-MANIFEST.json (path + sha256).  Run tools/leak_scan.py afterwards.
+Writes SYNC-MANIFEST.json through tools/verify_manifest.py: the fingerprint of the files THIS repository holds (the payload of the program), with the hash of the
+development tree's copy kept as dev_sha256 where the two differ.  Run tools/leak_scan.py afterwards.
 """
-import argparse, fnmatch, hashlib, json, os, re, shutil
+import argparse, fnmatch, hashlib, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BS = chr(92)
@@ -35,7 +36,9 @@ DENY_DIRS = ['dialogue/', 'ai/', 'audio/', 'voice/', 'quests/', 'items/', 'perks
 REF = re.compile(r'[A-Za-z0-9_./\\ -]*[A-Za-z0-9_-]\.(?:py|ps1|pas|json|psc)\b')
 IMP = re.compile(r'^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)', re.M)
 TEXT = ('.py', '.ps1', '.psc', '.pas')
-OWNED = ('builder/', 'install-output.ps1', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py', 'worldfix/convert_single_mesh.py')       # seeded once from the dev tree, then owned by this repo
+OWNED = ('builder/', 'install-output.ps1', 'convert-fo3-assets.ps1', 'packaging/common.ps1', 'start/', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py',
+         'worldfix/convert_single_mesh.py', 'worldfix/build_door_anims.py', 'worldfix/restore_dlc_refs.py', 'worldfix/restore_refs.py',
+         'worldfix/elric_prep.py', 'worldfix/ref_reasons.py')       # seeded once from the dev tree, then owned by this repo (a later sync never overwrites them)
 # machine-specific literals of the dev PC -> neutral placeholders (the builder's staging step maps the placeholders to the user's detected folders)
 def _local():
     """your dev-machine paths live in publish/local/config.json (git-ignored); nothing personal is written in this tracked file"""
@@ -117,9 +120,10 @@ def main():
     mp = os.path.join(HERE, 'SYNC-MANIFEST.json')
     if os.path.exists(mp) and not a.dry_run:
         for f in json.load(open(mp))['files']:
-            if f['path'] not in wanted and os.path.exists(os.path.join(HERE, f['path'])):
+            # only files the dev tree supplies: a file that lives only in this repo (origin "repo") is never removed because the dev tree does not know it
+            if f.get('origin', 'dev') == 'dev' and f['path'] not in wanted and os.path.exists(os.path.join(HERE, f['path'])):
                 os.remove(os.path.join(HERE, f['path']))
-    man = []
+    dev_hash = {}
     for rel in sorted(wanted):
         src, dst = os.path.join(dev, rel), os.path.join(HERE, rel)
         raw = open(src, 'rb').read()
@@ -129,7 +133,7 @@ def main():
             raw = ''.join(tab.join(c[:5] + ['']) + chr(10) for c in rows).encode('utf-8')
         elif rel.lower().endswith(TEXT + ('.json',)):
             raw = scrub(raw.decode('utf-8', errors='surrogateescape')).encode('utf-8', errors='surrogateescape')
-        man.append({'path': rel, 'sha256': hashlib.sha256(raw).hexdigest()})
+        dev_hash[rel] = hashlib.sha256(raw.replace(b'\r\n', b'\n')).hexdigest()
         if rel.startswith(OWNED) and os.path.exists(dst):
             continue            # the installer is a release product now: edited here, never overwritten from the dev tree
         if not a.dry_run:
@@ -139,7 +143,9 @@ def main():
         for r, ds, fs in os.walk(HERE, topdown=False):
             if not fs and not ds and '.git' not in r and r != HERE:
                 os.rmdir(r)
-        json.dump({'files': man}, open(mp, 'w'), indent=1)
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import verify_manifest
+        verify_manifest.write(HERE, mp, dev_hash)           # the hashes of the files as they are in THIS repository (the dev tree's copy is kept as dev_sha256)
     print('%d files %s; %d references skipped' % (len(wanted), 'would be copied' if a.dry_run else 'copied', len(skipped)))
     for s in sorted(skipped):
         if not s.endswith('.pyc'):

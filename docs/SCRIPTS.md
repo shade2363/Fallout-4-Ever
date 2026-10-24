@@ -22,5 +22,6 @@ A group moves into the demo when it passes both conditions. Nothing is added "be
 * Replaces the script of Fallout 4's own new-game intro (`QF_MQ101_0001ED86`, a loose file that shadows the one in the game archives), so **New Game no longer plays the
   pre-war intro**: it plays a black two-frame movie the engine needs, then moves the player to the spot where a Fallout 3 player steps out of the vault door.
 * Starts the quest *Escape!* and completes it: the Pip-Boy shows it under completed quests.
-* Gives and equips the Pip-Boy, then opens the character editor, then the SPECIAL screen.
+* Gives and equips the Pip-Boy, then opens the character editor, then the SPECIAL screen. (`CapitalConvert.exe build --no-special-screen` builds the start without that screen: the
+  character gets 4 in every stat instead. For a PC where the screen's Done button is off screen. Compiled and unit-tested, not yet run in the game.)
 * While the mod is installed, **every New Game starts this way**; uninstalling removes the replacement script and Fallout 4's normal start comes back.

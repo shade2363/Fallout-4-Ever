@@ -1,6 +1,7 @@
 Scriptname CapStartDemo extends Quest
 {Fallout 4-Ever: New Game start. The replacement MQ101 fragment moves the player outside Vault 101 and starts this quest. Once the world around the player is loaded this
-script gives the Pip-Boy, completes the "Escape!" quest, then opens the character editor and the SPECIAL screen (one after the other).}
+script gives the Pip-Boy, completes the "Escape!" quest, then opens the character editor and the SPECIAL screen (one after the other; a build made with
+--no-special-screen gives the default stats instead of the screen).}
 
 Bool Property Done Auto
 
@@ -35,12 +36,23 @@ Event OnTimer(int aiTimerID)
 	Game.ShowRaceMenu()
 EndEvent
 
+Function GiveDefaultStats()
+	{Used instead of the SPECIAL screen when the build was made with --no-special-screen: the seven stats get 4 each (28 points, the total the screen hands out).}
+	Actor player = Game.GetPlayer()
+	int i = 0
+	While i < 7
+		ActorValue av = Game.GetFormFromFile(@SPECIALAV@ + i, "Fallout4.esm") as ActorValue          ; Strength, Perception, Endurance, Charisma, Intelligence, Agility, Luck
+		If av != None
+			player.SetValue(av, 4.0)
+		EndIf
+		i += 1
+	EndWhile
+EndFunction
+
 Event OnMenuOpenCloseEvent(string asMenuName, bool abOpening)
 	If asMenuName == "LooksMenu" && !abOpening
 		UnregisterForMenuOpenCloseEvent("LooksMenu")
-		RegisterForMenuOpenCloseEvent("SPECIALMenu")
-		Debug.Trace("F4EVER start: character editor closed, opening SPECIAL")
-		Game.ShowSPECIALMenu()
+@SPECIALSTEP@
 	ElseIf asMenuName == "SPECIALMenu" && !abOpening
 		UnregisterForMenuOpenCloseEvent("SPECIALMenu")
 		Debug.Trace("F4EVER start: SPECIAL closed, the player is free")
