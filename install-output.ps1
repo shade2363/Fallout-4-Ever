@@ -3,6 +3,7 @@
 #   powershell -ExecutionPolicy Bypass -File .\install-output.ps1 -Loose          # the old behaviour: no staged BA2s, textures / faces / materials loose
 #   powershell -ExecutionPolicy Bypass -File .\install-output.ps1 -DryRun         # print everything that would be copied / backed up / removed; writes nothing
 #   powershell -ExecutionPolicy Bypass -File .\install-output.ps1 -Uninstall      # remove exactly what was installed, restore backed-up originals (add -DryRun to preview)
+#   powershell -ExecutionPolicy Bypass -File .\install-output.ps1 -MergePlugins   # keep the plugins already enabled in plugins.txt (default: a clean list with only this mod's plugins; the old list is saved and -Uninstall puts it back)
 # Never silently overwrites: a file in Data that did not come from us and differs is first copied to backup\Data-<timestamp>\ (with the same relative path).
 # installed-files.txt lists EVERY file placed in Data (plugins, archives, loose meshes / textures / materials / sound / music / scripts / video / F4SE / LODSettings); -Uninstall removes those.
 #
@@ -24,11 +25,13 @@ param(
   [string]$Sandbox,
   [string]$OutDir,
   [string]$Fo3Data,                    # where the FO3 videos come from (default: found like setup.ps1 does)
-  [string[]]$AlsoPlugins               # extra plugin file names from tool\output (e.g. F3_Perks.esp): installed and activated AFTER the Capital plugins (end of the load order)
+  [string[]]$AlsoPlugins,              # extra plugin file names from tool\output (e.g. F3_Perks.esp): installed and activated AFTER the Capital plugins (end of the load order)
+  [switch]$MergePlugins                # keep the plugins already enabled in plugins.txt (the default is a clean list: only this mod's plugins; the old list is saved and -Uninstall puts it back)
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 . (Join-Path $root 'packaging\common.ps1')
+if ($env:CAPITAL_MERGE_PLUGINS -eq '1') { $MergePlugins = $true }          # set by CapitalConvert.exe build --keep-other-plugins
 $out = if ($OutDir) { (Resolve-Path $OutDir).Path.TrimEnd('\') } else { Join-Path $root 'tool\output' }
 $stageDir = Join-Path $out 'ba2-stage'
 $stamp = Get-Date -Format yyyyMMdd-HHmmss
@@ -287,7 +290,20 @@ if ($Uninstall) {
     $rx = '^\*?(' + ((@($ourPlugins) + $manifestPlugins | Select-Object -Unique | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\s*$'
     $before = @(Get-Content $pluginsTxt); $after = @($before | Where-Object { $_ -notmatch $rx })
     Log "plugins.txt: removing $($before.Count - $after.Count) of our plugin lines"
-    if (-not $DryRun) { Set-Content $pluginsTxt $after -Encoding ascii }
+    # a clean-list install saved the list it replaced: put those plugins back (the newest saved copy; plugins added since then stay, ours never come back)
+    $plUndoFile = Join-Path (Split-Path $manifest) 'installed-plugins-undo.json'
+    $plMode = if (Test-Path $plUndoFile) { try { [string](Get-Content $plUndoFile -Raw | ConvertFrom-Json).mode } catch { '' } } else { '' }
+    $saved = @(); $savedFrom = $null
+    if ($plMode -eq 'clean' -and (Test-Path $backupRoot)) {
+      $bak = @(Get-ChildItem $backupRoot -File -Filter 'plugins.txt.pre-capital*' | Sort-Object LastWriteTimeUtc, Name -Descending | Select-Object -First 1)
+      if ($bak.Count) { $savedFrom = $bak[0]; $saved = @(Get-Content $savedFrom.FullName | Where-Object { $_ -notmatch '^#' -and $_.Trim() -and $_ -notmatch $rx }) }
+    }
+    if ($savedFrom) {
+      $extra = @($after | Where-Object { $_ -notmatch '^#' -and $_.Trim() -and ($saved -notcontains $_) })
+      $after = @('# This file is used by Fallout4 to keep track of your downloaded content.') + $saved + $extra
+      Log "plugins.txt: putting back your earlier list ($($saved.Count) plugin line(s) from $($savedFrom.Name)$(if ($extra.Count) { ", $($extra.Count) added since stay" }))"
+    }
+    if (-not $DryRun) { Set-Content $pluginsTxt $after -Encoding ascii; if (Test-Path $plUndoFile) { Remove-Item $plUndoFile } }
   }
   if (-not $DryRun -and (Test-Path $manifest)) { Remove-Item $manifest }
   $legacyBak = @(Get-ChildItem $backupRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'Data-*' -and -not (Test-Path (Join-Path $_.FullName '_capital-backup.txt')) })
@@ -319,7 +335,8 @@ if ($Uninstall) {
 $plan = New-Plan
 if (-not $plan.Count) { throw "tool\output has no .esm/.ba2 files yet ($out)." }
 if (-not ($plan | Where-Object { $_.Group -eq 'plugins' })) { throw "no converted plugins in $out" }
-if ($script:noStage) { Log 'Installing the textures / faces / materials as loose files (the demo does not pack them into archives). This is normal.' }
+$looseArt = @($plan | Where-Object { $_.Rel -match '^(Textures|Materials)\\' -or $_.Rel -match '^Meshes\\(FO3Faces|Actors|Capital)\\' })          # the textures of the Fallout 3 world are in the converted *- Textures.ba2 archives, not here
+if ($script:noStage -and $looseArt.Count) { Log "Installing $($looseArt.Count) textures / faces / materials as loose files (the demo does not pack them into archives). This is normal." }
 foreach ($w in $script:staleStage) { Log "Staged archive NOT used: $w - its loose files are installed instead" 'Yellow' }
 if ($Loose) { Log '-Loose: no staged archives; textures / faces / materials / own models go in loose.' }
 
@@ -376,10 +393,18 @@ elseif (Test-Path (Join-Path $vdir 'F3Intro.bik')) {
   # the New Game movie call of FO4 needs a REAL movie (a missing file hangs the load): a 2-frame cut of the FO3 '2 weeks later' card
   $blank = Join-Path $vdir 'F3Blank.bik'
   $twoWeeks = if ($script:fo3Data) { Join-Path $script:fo3Data 'Video\2 weeks later.bik' } else { $null }
-  if (-not (Test-Path $blank) -and $twoWeeks -and (Test-Path $twoWeeks)) { & python (Join-Path $root 'tools\make_blank_bik.py') $twoWeeks $blank 36 1; [void]$newOwned.Add('Video\F3Blank.bik'); $generated = $true }
+  # (Invoke-CapitalPy: the packaged program has no python on the PATH, a plain "python" call stopped the install on a PC without one)
+  if (-not (Test-Path $blank) -and $twoWeeks -and (Test-Path $twoWeeks)) {
+    $rc = Invoke-CapitalPy (Join-Path $root 'tools\make_blank_bik.py') @($twoWeeks, $blank, '36', '1')
+    if ($rc -ne 0) { Log "make_blank_bik.py failed (exit $rc): New Game needs Video\F3Blank.bik, the start will hang without it" 'Red' }
+    [void]$newOwned.Add('Video\F3Blank.bik'); $generated = $true
+  }
   # FO4 plays only the Bink audio track whose id matches its language (vanilla videos: ids 1..5); FO3 movies have one track with id 0 -> silent. Idempotent in-place header patch.
   $vids = @($script:f3vids.Values | ForEach-Object { Join-Path $vdir $_ } | Where-Object { Test-Path $_ })
-  if ($vids) { & python (Join-Path $root 'tools\patch_bink_track.py') 1 @vids }
+  if ($vids) {
+    $rc = Invoke-CapitalPy (Join-Path $root 'tools\patch_bink_track.py') (@('1') + $vids)
+    if ($rc -ne 0) { Log "patch_bink_track.py failed (exit $rc): the Fallout 3 movies will play without sound" 'Yellow' }
+  }
   if ($generated) { [IO.File]::WriteAllLines($manifest, (@('# install-output.ps1 manifest: every file below is placed in Fallout 4\Data by this project (relative paths); -Uninstall removes them', "# written $(Get-Date -Format s)") + @($newOwned | Sort-Object))) }
 }
 # FrameCap: F4SE plugin that caps the game at 60 fps (above 60 fps FO4 runs its simulation faster than real time); the ini is kept if it already exists (fps=0 turns the cap off)
@@ -395,14 +420,41 @@ $header = '# This file is used by Fallout4 to keep track of your downloaded cont
 $existing = if (Test-Path $pluginsTxt) { @(Get-Content $pluginsTxt) } else { @() }
 $active = @($order | Where-Object { Test-Path (Join-Path $data $_) })
 if ($DryRun) { $active = @($order | Where-Object { $n = $_; (Test-Path (Join-Path $data $n)) -or ($plan | Where-Object { $_.Rel -eq $n }) }) }
-# keep other mods' lines; drop our plugins and any comment line (re-added as the header)
-$keep = @($existing | Where-Object { $_ -notmatch '^#' -and $_.Trim() -and $_ -notmatch ('^\*?(' + (($order | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')') })
-if ($DryRun) { Log "would write plugins.txt: $($active -join ', ')" }
+# Other mods that are already enabled would load together with the Capital Wasteland (a New Vegas port in the same list made the first tests unusable), so the default is a CLEAN
+# list: only this mod's plugins. The list that was there is saved first (backup\plugins.txt.pre-capital, plus a dated copy when it changed since) and -Uninstall puts it back.
+# -MergePlugins (CapitalConvert build --keep-other-plugins) keeps the other plugins instead. Fallout 4 loads its own masters and DLC without plugins.txt.
+$ourRx = '^\*?(' + (($order | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\s*$'
+$foreign = @($existing | Where-Object { $_ -notmatch '^#' -and $_.Trim() -and $_ -notmatch $ourRx })          # lines of other mods
+$keep = if ($MergePlugins) { $foreign } else { @() }
+$plUndo = Join-Path (Split-Path $manifest) 'installed-plugins-undo.json'
+if ($DryRun) {
+  Log "would write plugins.txt: $($active -join ', ')"
+  if ($foreign.Count -and $MergePlugins) { Log "  (and keep the $($foreign.Count) other plugin line(s) that are in it)" }
+  elseif ($foreign.Count) { Log "  (the $($foreign.Count) other plugin line(s) in it would be saved to $backupRoot\plugins.txt.pre-capital and left out; -Uninstall puts them back)" }
+}
 else {
+  # A list with none of our plugins makes Fallout 4 start without the Capital Wasteland while the loose New Game script of this mod is still installed: black screen, then
+  # "not responding". So never write one (the old list stays as it is) and stop the install with the reason instead of reporting success.
+  if (-not $active.Count) { throw "None of this mod's plugins are in $data, so plugins.txt was NOT changed (an empty list makes Fallout 4 hang on a black screen). The copy above probably failed (antivirus, a full disk, Fallout 4 running): fix that and run the install again." }
   New-Item -ItemType Directory -Force $pluginsDir | Out-Null
-  if ((Test-Path $pluginsTxt) -and -not (Test-Path (Join-Path $backupRoot 'plugins.txt.pre-capital'))) { New-Item -ItemType Directory -Force $backupRoot | Out-Null; Copy-Item $pluginsTxt (Join-Path $backupRoot 'plugins.txt.pre-capital') }
+  if (Test-Path $pluginsTxt) {
+    $plItem = Get-Item $pluginsTxt -Force
+    if ($plItem.IsReadOnly) { $plItem.IsReadOnly = $false; Log 'plugins.txt was marked read-only (some tools do that): the mark is removed so the list can be written' 'Yellow' }
+    $firstBak = Join-Path $backupRoot 'plugins.txt.pre-capital'
+    New-Item -ItemType Directory -Force $backupRoot | Out-Null
+    if (-not (Test-Path $firstBak)) { Copy-Item $pluginsTxt $firstBak }
+    elseif ($foreign.Count -and ((Get-Content $pluginsTxt -Raw) -ne (Get-Content $firstBak -Raw))) { Copy-Item $pluginsTxt (Join-Path $backupRoot "plugins.txt.pre-capital-$stamp") }
+  }
   (@($header) + $keep + @($active | ForEach-Object { "*$_" })) | Set-Content $pluginsTxt -Encoding ascii
+  # read it back: every plugin must really be in the file, or the install fails here and not as a hang in the game
+  $written = @(Get-Content $pluginsTxt | Where-Object { $_ -match '^\*' } | ForEach-Object { $_.TrimStart('*').Trim() })
+  $lost = @($active | Where-Object { $written -notcontains $_ })
+  if ($lost.Count) { throw "plugins.txt ($pluginsTxt) does not list: $($lost -join ', '). Something changed the file while it was written (an antivirus, a mod manager, or Fallout 4 itself): close them and run the install again." }
+  [IO.File]::WriteAllText($plUndo, (@{ mode = $(if ($MergePlugins) { 'merge' } else { 'clean' }); written = (Get-Date -Format s) } | ConvertTo-Json))
   Log "plugins.txt: $($active -join ', ')"
+  Log "  checked: all $($active.Count) plugins are in $pluginsTxt"
+  if ($foreign.Count -and -not $MergePlugins) { Log "  your $($foreign.Count) other plugin line(s) are NOT enabled now (a clean load order is needed); saved in $backupRoot, the uninstall puts them back" 'Yellow' }
+  elseif ($foreign.Count) { Log "  kept your $($foreign.Count) other plugin line(s) (-MergePlugins): they load together with the Capital Wasteland" 'Yellow' }
 }
 
 # Loose-file / plugin-selection settings (custom ini is never touched by the launcher)
@@ -443,5 +495,12 @@ if (-not $DryRun) {
 }
 Flush-Log
 Log "Log: $logFile"
-if (-not $DryRun) { "Done. Start Fallout 4 from Steam, choose New Game, and you start outside Vault 101." }
+if (-not $DryRun) {
+  Log ''
+  Log 'Changed outside Fallout 4\Data (the uninstall puts all of it back):' 'Cyan'
+  Log "  $pluginsTxt : $(if ($MergePlugins) { 'our plugins added to your list' } else { 'a clean list with only this mod; your earlier list is saved in ' + $backupRoot })"
+  Log "  $prefsIni : bEnableFileSelection=1 (lets the game read plugins.txt; the old value is remembered)"
+  Log "  $customIni : loose files are allowed (only created when it did not exist)"
+  Log 'Done. Start Fallout 4 from Steam, choose New Game, and you start outside Vault 101.'
+}
 Flush-Log

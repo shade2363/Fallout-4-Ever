@@ -1,7 +1,7 @@
 """Stage steps that are more than "run one script".  Each takes (cfg, log, *args); cfg has workdir / fo4 / fo3_data.
 Everything here mirrors the manual procedure in README.md; nothing writes into the Fallout 3 install and the Fallout 4 install is only touched by
 the prepare stage (CreationKit.ini, with a .bak) and the install stage."""
-import glob, os, re, shutil, subprocess, sys
+import glob, os, re, shutil, struct, subprocess, sys
 from stages import FO3_PLUGINS
 
 PY = None
@@ -18,15 +18,15 @@ def _py(cfg):
     return [sys.executable, '--script'] if getattr(sys, 'frozen', False) else [sys.executable]
 
 
-def _run(cmd, cwd, log, env=None, tolerate=False, collect=None):
+def _run(cmd, cwd, log, env=None, tolerate=False, collect=None, only=None):
     """runs a helper program; its output goes through LogFilter (millions of converter lines become a few progress lines, the full text goes to raw-output.log);
-    collect = a list that receives every raw line (to look for results)"""
+    collect = a list that receives every raw line (to look for results), or with only=(text, ...) just the lines that contain one of those texts"""
     from logfilter import LogFilter
     log('    $ ' + ' '.join(cmd))
     p = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000 if os.name == 'nt' else 0)
     flt = LogFilter(os.environ.get('CAPITAL_RAW_LOG'))
     for line in p.stdout:
-        if collect is not None:
+        if collect is not None and (only is None or any(s in line for s in only)):
             collect.append(line.rstrip())
         for shown in flt.feed(line):
             log('      ' + shown.strip() if shown.startswith('      ') else '      ' + shown)
@@ -108,7 +108,56 @@ def _libs():
 
 
 # --------------------------------------------------------------------------------------------------------------------------------
+XCONVERT_ERRORS = ('Unexpected Error', 'EAccessViolation', 'A file of that name exists already')       # xConvert prints these and still exits with 0
+
+
+def plugin_masters(path):
+    """master names of a plugin, read from its TES4 header, or None when the file is missing, not a plugin or cut short"""
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(24)
+            if len(head) < 24 or head[:4] != b'TES4':
+                return None
+            size = struct.unpack_from('<I', head, 4)[0]
+            data = f.read(size)
+    except OSError:
+        return None
+    if len(data) < size:
+        return None
+    masters, p = [], 0
+    while p + 6 <= len(data):
+        sz = struct.unpack_from('<H', data, p + 4)[0]
+        if data[p:p + 4] == b'MAST':
+            masters.append(data[p + 6:p + 6 + sz].rstrip(b'\0').decode('latin1'))
+        p += 6 + sz
+    return masters
+
+
+def plugin_complete(path):
+    """True when the top-level records and groups of the plugin add up exactly to the file size: a conversion that was killed while writing is not complete"""
+    if plugin_masters(path) is None:
+        return False
+    try:
+        total = os.path.getsize(path)
+        with open(path, 'rb') as f:
+            p = 0
+            while p < total:
+                f.seek(p)
+                head = f.read(24)
+                if len(head) < 24:
+                    return False
+                size = struct.unpack_from('<I', head, 4)[0]
+                p += size if head[:4] == b'GRUP' else 24 + size              # a group's size includes its own 24-byte header, a record's does not
+    except OSError:
+        return False
+    return p == total
+
+
 def convert_plugins(cfg, log):
+    """Fallout3.esm is fed to xConvert as FalloutNV.esm, the DLC plugins are patched to name it as their master, xConvert converts each one into lab/Data, and the
+    result gets Fallout3.esm back as its master.  Safe to run again after any stop: a finished output is kept, anything else is removed first (xConvert will not
+    overwrite a file: it prints 'A file of that name exists already', crashes and still exits with 0, and the next step then failed with "Master FalloutNV.esm not
+    found" on a plugin that had been renamed on an earlier run)."""
     wd, fo3 = cfg['workdir'], cfg['fo3_data']
     fnv_data = os.path.join(wd, 'lab', 'fnv', 'Data')
     conv = os.path.join(wd, 'tool', 'build', 'xedit_converter', 'xConvert.exe')
@@ -124,24 +173,35 @@ def convert_plugins(cfg, log):
         if name != 'Fallout3':
             _run(ps + [os.path.join(wd, 'rename-master.ps1'), '-Plugin', dst, '-From', 'Fallout3.esm', '-To', 'FalloutNV.esm'], wd, log)
     for name in FO3_PLUGINS:
-        if not os.path.exists(os.path.join(fo3, name + '.esm')):
+        src = os.path.join(fo3, name + '.esm')
+        if not os.path.exists(src):
             continue
         arg = 'FalloutNV.esm' if name == 'Fallout3' else name + '.esm'
-        out = os.path.join(wd, 'lab', 'Data', arg)
-        inp = os.path.join(fnv_data, arg)
+        out = os.path.join(wd, 'lab', 'Data', arg)                      # a DLC plugin is converted straight into its final name: out and final are the same file
         final = os.path.join(wd, 'lab', 'Data', name + '.esm')
-        if os.path.exists(out) and os.path.getmtime(out) > os.path.getmtime(inp):
+        # finished = complete on disk and newer than the Fallout 3 file it came from (the patched copy that xConvert reads is rewritten on every run, so its time says nothing)
+        if os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(src) and plugin_complete(out):
             log('  %s already converted (%d MB): not converting again' % (name, os.path.getsize(out) // 1048576))
         else:
+            if os.path.exists(out):
+                log('  %s: removing the earlier output (it is older than the game file or was cut short): xConvert does not overwrite files' % os.path.basename(out))
+                os.remove(out)
             log('  converting %s (the base world takes about 50 min and ~20 GB RAM)' % name)
-            _run([conv, arg], os.path.join(wd, 'lab', 'fnv'), log)
-            if not os.path.exists(out):
-                raise RuntimeError('xConvert produced no %s' % out)
+            bad = []
+            _run([conv, arg], os.path.join(wd, 'lab', 'fnv'), log, collect=bad, only=XCONVERT_ERRORS)
+            if bad:
+                raise RuntimeError('xConvert failed on %s: %s (details: raw-output.log in the work folder)' % (arg, bad[-1].strip()[:300]))
+            if not os.path.exists(out) or not plugin_complete(out):
+                raise RuntimeError('xConvert produced no complete %s' % out)
         if name == 'Fallout3':
             shutil.copy2(out, final)            # the base plugin was fed in as FalloutNV.esm; its output has no FalloutNV master to rename
             log('  Fallout3.esm written (%d MB)' % (os.path.getsize(final) // 1048576))
         else:
-            _run(ps + [os.path.join(wd, 'rename-master.ps1'), '-Plugin', out, '-From', 'FalloutNV.esm', '-To', 'Fallout3.esm', '-Out', final], wd, log)
+            masters = plugin_masters(out) or []
+            if 'FalloutNV.esm' not in masters and 'Fallout3.esm' in masters:
+                log('  %s already points at Fallout3.esm: nothing to rename' % os.path.basename(out))
+            else:
+                _run(ps + [os.path.join(wd, 'rename-master.ps1'), '-Plugin', out, '-From', 'FalloutNV.esm', '-To', 'Fallout3.esm', '-Out', final], wd, log)
     log('  converted plugins are in lab/Data (the world-fix stage reads them from there)')
 
 
@@ -271,13 +331,30 @@ def sounds_placeholder(cfg, log):
     log('  empty CapitalSounds.esp written (placeholder until the audio stage exists)')
 
 
+def _elric_failures(cfg):
+    """meshes the bulk Elric pass gave up on, from elric-failures.txt (lines: plugin <TAB> meshes\\new_vegas\\<path>): the paths below meshes/new_vegas, lower case, forward slashes"""
+    p = os.path.join(cfg['workdir'], 'elric-failures.txt')
+    rels = set()
+    if os.path.isfile(p):
+        with open(p, encoding='utf-8', errors='replace') as f:
+            for line in f:
+                parts = line.rstrip('\r\n').split('\t')
+                if len(parts) == 2:
+                    rel = parts[1].replace('\\', '/').lower()
+                    i = rel.find('meshes/new_vegas/')
+                    if i >= 0:
+                        rels.add(rel[i + len('meshes/new_vegas/'):])
+    return sorted(rels)
+
+
 def meshes(cfg, log):
     """loose meshes: keyframed-collision fixes, animated doors, meshes the bulk conversion skipped, terminal hybrids (+ turning the placed terminals)"""
     wd = cfg['workdir']
     py = _py(cfg)
     out = os.path.join(wd, 'tool', 'output')
     _run(py + [os.path.join(wd, 'worldfix', 'scan_animated_nifs.py'), '--out', os.path.join(out, 'loose')], wd, log)
-    _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
+    door_lines = []
+    _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log, collect=door_lines)
     audit = os.path.join(wd, 'lab', 'audit.txt')
     os.makedirs(os.path.dirname(audit), exist_ok=True)
     with open(audit, 'w', encoding='utf-8') as f:
@@ -290,16 +367,42 @@ def meshes(cfg, log):
     ok = sum(1 for l in lines if l.startswith('OK '))
     absent = sum(1 for l in lines if l.startswith('ABSENT '))
     bad = [l for l in lines if l.startswith('FAIL ')]
-    log('  mesh repair: %d converted, %d are missing in Fallout 3 itself (nothing to convert), %d could not be converted' % (ok, absent, len(bad)))
+    log('  mesh repair: %d converted, %d are not in any Fallout 3 archive (nothing to convert), %d could not be converted' % (ok, absent, len(bad)))
+    if absent:
+        gone = sorted({l[len('ABSENT'):].split(' | ')[0].strip() for l in lines if l.startswith('ABSENT')})
+        with open(os.path.join(wd, 'missing-in-fallout3.txt'), 'w', encoding='utf-8') as f:
+            f.write('\n'.join(gone) + '\n')
+        log('  %d meshes are named by the Fallout 3 plugins but were never shipped in any Fallout 3 archive (test, effect and unused meshes): the original game shows nothing '
+            'for them either. List: missing-in-fallout3.txt' % len(gone))
     if bad:
         _warn(cfg, '%d meshes could not be converted and stay missing (see raw-output.log): the objects that use them are invisible in the game' % len(bad))
-    # the doors Elric crashes on (reported 'model missing from archives' by build_door_anims): convert them one by one, then give them their animation
-    for rel, extra in (('dungeons/metro/exterior/metrotunneltransdoorload01.nif', ['--no-collision']), ('dungeons/vault/halls/vdoor01.nif', []),
-                       ('dungeons/vaultruined/doors/vdoorr01.nif', [])):
+    # meshes Elric could still not optimize in the bulk pass (elric-failures.txt; normally empty: worldfix/elric_prep.py removes the cause): one by one, with their own repair
+    redo = _elric_failures(cfg)
+    still = []
+    for rel in redo:
+        if os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
+            continue
+        rc = _run(py + [os.path.join(wd, 'worldfix', 'convert_single_mesh.py'), rel], wd, log, tolerate=True)
+        if rc != 0:
+            still.append(rel)
+    if redo:
+        log('  meshes the bulk optimizer skipped: %d, repaired one by one: %d' % (len(redo), len(redo) - len(still)))
+    if still:
+        _warn(cfg, '%d meshes could not be optimized by Elric even on their own (elric-failures.txt) and are missing in the game: %s' % (len(still), ', '.join(still[:5]) + (' ...' if len(still) > 5 else '')))
+    # doors whose model build_door_anims could not find (neither in the converted archives nor loose): convert those one by one, then give them their animation.
+    # With elric_prep.py the doors go through the bulk pass like every other mesh, so this normally has nothing to do.
+    fix_doors = []
+    for l in door_lines:
+        fix_doors += re.findall(r"\('missing', 'meshes/new_vegas/(.+?)'\)", l)
+    for rel in sorted(set(fix_doors)):
+        if os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
+            continue                                     # the repair above already made it
+        extra = ['--no-collision'] if rel.endswith('metrotunneltransdoorload01.nif') else []
         rc = _run(py + [os.path.join(wd, 'worldfix', 'convert_single_mesh.py'), rel] + extra, wd, log, tolerate=True)
         if rc != 0 or not os.path.isfile(os.path.join(out, 'loose', 'meshes', 'new_vegas', *rel.split('/'))):
             _warn(cfg, 'the door mesh %s was not repaired: that door will not animate properly (Vault 101 door, metro doors)' % rel)
-    _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
+    if fix_doors:                                       # build_door_anims reads loose models too: this second pass animates the doors that were just repaired
+        _run(py + [os.path.join(wd, 'worldfix', 'build_door_anims.py')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'add_terminal_hybrid.py')], wd, log)
     _run(py + [os.path.join(wd, 'worldfix', 'fix_terminal_refs.py'), '--delta', '-90'], wd, log)
 

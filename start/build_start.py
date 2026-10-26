@@ -4,6 +4,10 @@ New Game -> the player is moved to the spot right outside Vault 101, has a Pip-B
 editor and the SPECIAL screen open.  The only inputs from your games: the converted Fallout3.esm (to check that the spawn point exists) and your Fallout 4 Papyrus compiler.
 
   python start/build_start.py --conv <converted Fallout3.esm> --fo4 <Fallout 4 folder> --out <CapitalStart.esp> --src <script source folder> --scripts-out <pex folder>
+                              [--special screen|default]
+
+--special default builds the start without the SPECIAL screen: the seven stats get 4 each.  For a PC where the screen's Done button cannot be reached (a game window larger
+than the screen) and the player would stay stuck behind it.
 
 Plugin: CapitalStart.esp, masters Fallout4.esm + Fallout3.esm: quest CapitalStartDemo (Start Game Enabled, script CapStartDemo) and quest CapitalEscape ("Escape!").
 Scripts: CapStartDemo.pex and Fragments\\Quests\\QF_MQ101_0001ED86.pex (replaces the vanilla intro fragment; removed again by the uninstall).
@@ -17,6 +21,12 @@ from navlib import iter_records, sub, record, group
 EXIT_LOCAL = 0x0ACD96          # Fallout3.esm placed reference "CG04SunBlindDummy" in the cell Vault101Exterior: the spot where the player steps out of the vault
 EXIT_CELL = 0x10010C1          # (Fallout3.esm is master 1 of the converted plugin)
 PIPBOY = 0x00021B3B            # Fallout4.esm Pip-Boy
+SPECIAL_AV = 0x2C2             # Fallout4.esm actor values Strength .. Luck are the seven consecutive ids 0x2C2 .. 0x2C8
+SPECIAL_STEP = {               # what runs when the character editor closes
+    'screen': ['\t\tRegisterForMenuOpenCloseEvent("SPECIALMenu")', '\t\tDebug.Trace("F4EVER start: character editor closed, opening SPECIAL")', '\t\tGame.ShowSPECIALMenu()'],
+    'default': ['\t\tDebug.Trace("F4EVER start: character editor closed, no SPECIAL screen: default stats")', '\t\tGiveDefaultStats()',
+                '\t\tDebug.Trace("F4EVER start: the player is free")'],
+}
 START_ID, ESC_ID = 0x800, 0x801
 MASTERS = ['Fallout4.esm', 'Fallout3.esm']
 OWN = len(MASTERS)
@@ -56,8 +66,11 @@ def build_plugin(out):
         f.write(record('TES4', 0, hs, ver=131) + group(b'QUST', 0, start + esc))
 
 
-def write_sources(src):
-    subs = {'@EXIT@': str(EXIT_LOCAL), '@QSTART@': str(START_ID), '@QESC@': str(ESC_ID), '@PIPBOY@': str(PIPBOY)}
+def write_sources(src, special='screen'):
+    if special not in SPECIAL_STEP:
+        raise SystemExit('--special must be one of: %s' % ', '.join(sorted(SPECIAL_STEP)))
+    subs = {'@EXIT@': str(EXIT_LOCAL), '@QSTART@': str(START_ID), '@QESC@': str(ESC_ID), '@PIPBOY@': str(PIPBOY), '@SPECIALAV@': str(SPECIAL_AV),
+            '@SPECIALSTEP@': '\n'.join(SPECIAL_STEP[special])}
     out = {}
     for name, rel in (('CapStartDemo.psc.tmpl', 'CapStartDemo.psc'), ('QF_MQ101_0001ED86.psc.tmpl', os.path.join('Fragments', 'Quests', 'QF_MQ101_0001ED86.psc'))):
         with open(os.path.join(HERE, name), encoding='utf-8') as f:
@@ -123,11 +136,14 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--src', required=True)
     ap.add_argument('--scripts-out', required=True)
+    ap.add_argument('--special', choices=sorted(SPECIAL_STEP), default='screen', help='screen = the SPECIAL screen after the character editor (default); default = no screen, every stat 4')
     a = ap.parse_args()
     if not check_spawn_point(a.conv):
         raise SystemExit('the spawn point (Fallout3.esm reference %08X) is not in %s: the world conversion did not finish, or this is not the Fallout 3 GOTY data' % ((1 << 24) | EXIT_LOCAL, a.conv))
     print('spawn point found: Fallout3.esm %06X (outside Vault 101)' % EXIT_LOCAL)
-    files = write_sources(a.src)
+    files = write_sources(a.src, a.special)
+    if a.special != 'screen':
+        print('no SPECIAL screen: the character gets 4 in every stat')
     compile_all(a.fo4, a.src, a.scripts_out, files)
     for rel in ('CapStartDemo.pex', os.path.join('Fragments', 'Quests', 'QF_MQ101_0001ED86.pex')):
         if not os.path.isfile(os.path.join(a.scripts_out, rel)):

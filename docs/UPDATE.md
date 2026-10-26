@@ -25,8 +25,17 @@ Download the release files yourself and unzip the new program over the old one. 
 
 ## Command line
 ```
+CapitalConvert.exe --help               (every command; "<command> --help" shows its options; nothing is started)
+CapitalConvert.exe --version
+CapitalConvert.exe detect               (the games that were found and every problem)
+CapitalConvert.exe plan                 (the stages and which are done)
+CapitalConvert.exe build [--from ID] [--only ID] [--to ID] [--workdir DIR] [--fo4 DIR] [--fo3 DIR] [--yes]
+                         [--keep-other-plugins] [--no-special-screen]
+CapitalConvert.exe status
 CapitalConvert.exe update-check
 CapitalConvert.exe update-install
 CapitalConvert.exe update-rollback
 CapitalConvert.exe uninstall            (preview; add --yes to remove)
 ```
+`--keep-other-plugins` and `--no-special-screen` are remembered in your work folder; `--no-keep-other-plugins` and `--special-screen` switch them off again. A stage whose
+option changed runs again (the start and the install, about a minute).

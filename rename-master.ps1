@@ -29,6 +29,12 @@ while ($pos -lt $end) {
     "$([IO.Path]::GetFileName($Out)): masters = $($m -join ', ')"
     return
   }
+  if ($sig -eq 'MAST' -and $enc.GetString($b, $pos + 6, $sz).TrimEnd([char]0) -ieq $To) { $hasTo = $true }
   $pos += 6 + $sz
+}
+if ($hasTo) {        # a run that is repeated after an earlier one already renamed it (the plugin is its own output): nothing to do, and no error
+  if ($Out -ne $Plugin) { [IO.File]::WriteAllBytes($Out, $b) }
+  "$([IO.Path]::GetFileName($Out)): master is already $To (nothing to rename)"
+  return
 }
 throw "Master $From not found in $Plugin"

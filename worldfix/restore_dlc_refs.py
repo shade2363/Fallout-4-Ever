@@ -6,13 +6,17 @@ xConvert drops the editor markers (XMarker 0x3B / XMarkerHeading 0x34: 2,957 ref
   * XMarker / XMarkerHeading refs (same base ids in Fallout 4)
   * Caps001 pickups (base 0x0F -> Fallout 4 Caps001)
   * refs whose base object WAS converted (own DLC statics / doors / containers ... or a Fallout3.esm base) that are missing in the converted plugin
-Only refs that sit in a cell the DLC itself defines are restored (refs a DLC places into Fallout3.esm cells are skipped).  Each restored ref keeps its source FormID (local id), now with
-the converted plugin's own master index (2).  Idempotent: refs that already exist are skipped, so it can be run on the final, patched tool/output/<DLC>.esm in place.
+Refs a DLC places into a Fallout3.esm cell (Broken Steel adds 263 objects to the Capital Wasteland this way) go into the DLC's own override of that cell, when the converted plugin
+has one; they used to be skipped as "cell of another plugin".  Each restored ref keeps its source FormID (local id), now with the converted plugin's own master index (2).
+What cannot be put back is counted by reason (editor markers, sound emitters, ambient effects, water planes: see ref_reasons.py).
+Idempotent: refs that already exist are skipped, so it can be run on the final, patched tool/output/<DLC>.esm in place.
 
   python restore_dlc_refs.py --dlc Anchorage [--in tool/output/Anchorage.esm] [--out same]   |   --all"""
 import argparse, collections, math, os, struct, sys
 sys.path.insert(0, 'X:/__CAPITAL_WORKDIR__/navmesh')
 from navlib import iter_records, subrecords, sub, plugin_header
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ref_reasons
 
 FO3D = 'X:/__CAPITAL_FO3_DATA__/'
 OUTD = 'X:/__CAPITAL_WORKDIR__/tool/output/'
@@ -26,6 +30,17 @@ SKIP_BASE_NAMES = ('xmarker', 'collisionmarker', 'roommarker', 'radiationmarker'
 
 
 def log(m): print(m, flush=True)
+
+
+_F3 = {}
+
+
+def f3_info():
+    """base records of Fallout3.esm (signature, editor id, model), read once, to name the reason a DLC ref to one of them cannot be restored"""
+    if not _F3:
+        with open(FO3D + 'Fallout3.esm', 'rb') as fh:
+            _F3.update(ref_reasons.index_bases(fh.read()))
+    return _F3
 
 
 def run(name):
@@ -52,9 +67,12 @@ def run(name):
         if r.sig in BASE_SIGS and (r.fid >> 24) == 1: conv_base[(f3_idx << 24) | (r.fid & 0xFFFFFF)] = r.sig
     del c3
     conv_ids = {r.fid for r in iter_records(dc)}
-    src_edid = {}
-    for r in iter_records(ds):
-        if r.sig == 'STAT': src_edid[r.fid] = dict(subrecords(ds, r)).get('EDID', bytes(1)).rstrip(bytes(1)).decode('latin1')
+    src_info = ref_reasons.index_bases(ds)
+    src_edid = {fid: v[1] for fid, v in src_info.items() if v[0] == 'STAT'}
+
+    def why(base):
+        info = src_info.get(base) if (base >> 24) == own_src else (f3_info().get(base & 0xFFFFFF) if (base >> 24) == 0 else None)
+        return ref_reasons.reason(info, base)
 
     def build_ref(r):
         if not r.size: return None, 'empty'
@@ -73,7 +91,7 @@ def run(name):
             out.append(sub('NAME', struct.pack('<I', base)))
         else:
             nb = to_dst(base)
-            if nb is None or nb not in conv_base: return None, 'base not converted'
+            if nb is None or nb not in conv_base: return None, why(base)
             if any(src_edid.get(base, '').lower().startswith(x) for x in SKIP_BASE_NAMES): return None, 'marker base'
             out.append(sub('NAME', struct.pack('<I', nb)))
             if 'XTEL' in subs and len(subs['XTEL']) >= 28:
@@ -99,10 +117,12 @@ def run(name):
         cell = None
         for l, t in r.chain:
             if t in (6, 8, 9, 10): cell = struct.unpack('<I', l)[0]
-        if cell is None or (cell >> 24) != own_src: stat['skipped: cell of another plugin'] += 1; continue
+        if cell is None: stat['skipped: not in a cell'] += 1; continue
+        dcell = to_dst(cell)                                 # a cell of the DLC itself, or of Fallout3.esm (the DLC's override of it is looked up below)
+        if dcell is None: stat['skipped: cell of another plugin'] += 1; continue
         rec, g = build_ref(r)
         if rec is None: stat['skipped: ' + g] += 1; continue
-        lost[(own_dst << 24) | (cell & 0xFFFFFF)].append((g, rec)); stat['restored'] += 1
+        lost[dcell].append((g, rec)); stat['restored'] += 1
     log('%s: lost source refs: %s' % (name, dict(stat)))
     del ds
     if not stat['restored']: return

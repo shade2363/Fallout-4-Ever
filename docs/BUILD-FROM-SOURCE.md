@@ -15,7 +15,9 @@ You need Python 3.10 or newer (3.12 is what the release is built with) with Tk (
 ```
 python -m unittest discover -s tests -v
 python tools/leak_scan.py            # the release gate on the repository
+python tools/verify_manifest.py      # SYNC-MANIFEST.json describes the payload (after editing a payload file: --update)
 ```
+The command line of the program is documented by `python builder/capital_builder.py --help`.
 The tests need no game. `tools/smoke_exe.py` additionally needs Fallout 3 and Fallout 4 installed (read-only) and tests the packaged exe.
 
 ## Build the packaged program

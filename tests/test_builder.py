@@ -82,5 +82,122 @@ class CrashHandlingTests(unittest.TestCase):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+class ElricFailureListTests(unittest.TestCase):
+    """steps.py reads elric-failures.txt (meshes the bulk Elric pass gave up on) to convert them one by one"""
+
+    def test_paths_are_normalised(self):
+        import steps
+        tmp = tempfile.mkdtemp()
+        try:
+            with open(os.path.join(tmp, 'elric-failures.txt'), 'w', encoding='utf-8') as f:
+                f.write('Fallout3\tmeshes\\new_vegas\\Armor\\HeadGear\\PartyHat\\M\\PartyHatGO.nif\n')
+                f.write('Zeta\tmeshes\\new_vegas\\dlc05\\clutter\\rubblepile\\dlc05rubblepile01.nif\n')
+                f.write('Zeta\tmeshes\\new_vegas\\dlc05\\clutter\\rubblepile\\dlc05rubblepile01.nif\n')       # twice: once
+                f.write('garbage line without a tab\n')
+            self.assertEqual(steps._elric_failures({'workdir': tmp}), ['armor/headgear/partyhat/m/partyhatgo.nif', 'dlc05/clutter/rubblepile/dlc05rubblepile01.nif'])
+            self.assertEqual(steps._elric_failures({'workdir': os.path.join(tmp, 'nothing')}), [])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class DoorModelTests(unittest.TestCase):
+    """build_door_anims must find a door model that only exists as a repaired loose file (the Vault 101 door, the metro door): it used to look in the archives only"""
+
+    def setUp(self):
+        sys.path.insert(0, os.path.join(ROOT, 'worldfix'))
+        sys.path.insert(0, os.path.join(ROOT, 'navmesh'))
+        import build_door_anims
+        self.m = build_door_anims
+        self.tmp = tempfile.mkdtemp()
+        self.root = self.tmp + os.sep
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def loose(self, key, data):
+        p = self.m.loose_path(key, self.root)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, 'wb') as f:
+            f.write(data)
+
+    def test_a_loose_model_is_found_without_any_archive(self):
+        key = 'meshes/new_vegas/dungeons/vault/halls/vdoor01.nif'
+        self.loose(key, b'REPAIRED')
+        self.assertEqual(self.m.read_model(key, {}, self.root), b'REPAIRED')
+
+    def test_the_archive_is_used_when_there_is_no_loose_file(self):
+        import io
+        key = 'meshes/new_vegas/a/door.nif'
+        arch = io.BytesIO(b'..' + b'FROM-ARCHIVE')
+        self.assertEqual(self.m.read_model(key, {key: (arch, (2, 0, 12))}, self.root), b'FROM-ARCHIVE')
+
+    def test_the_loose_file_wins_over_the_archive(self):
+        import io
+        key = 'meshes/new_vegas/a/door.nif'
+        self.loose(key, b'LOOSE')
+        self.assertEqual(self.m.read_model(key, {key: (io.BytesIO(b'ARCHIVE'), (0, 0, 7))}, self.root), b'LOOSE')
+
+    def test_a_model_nowhere_is_none(self):
+        self.assertIsNone(self.m.read_model('meshes/new_vegas/none.nif', {}, self.root))
+
+    def test_importing_the_script_reads_no_archive(self):
+        # the module used to open six .ba2 files while being imported, so it could not be tested or reused
+        self.assertTrue(callable(self.m.main))
+
+
+class RefReasonTests(unittest.TestCase):
+    """the reason a dropped placed reference cannot be restored is named instead of the opaque 'base not converted'"""
+
+    def setUp(self):
+        sys.path.insert(0, os.path.join(ROOT, 'worldfix'))
+        sys.path.insert(0, os.path.join(ROOT, 'navmesh'))
+        import ref_reasons
+        self.r = ref_reasons.reason
+
+    def test_editor_markers(self):
+        self.assertEqual(self.r(('STAT', 'RoomMarker', ''), 0x1234), 'editor marker')
+        self.assertEqual(self.r(('STAT', 'COCMarkerHeading', 'MarkerCOCHeading.nif'), 0x1234), 'editor marker')
+        self.assertEqual(self.r(('STAT', 'CollisionMarker', ''), 0x1234), 'editor marker')
+
+    def test_sound_effect_and_water(self):
+        self.assertEqual(self.r(('SOUN', 'AMBWindMono01LP', ''), 1), 'ambient sound emitter')
+        self.assertEqual(self.r(('PWAT', 'WaterMetroLong', 'Water_Placeable\\WaterP1x4.NIF'), 1), 'placeable water plane')
+        self.assertIn('ambient effect', self.r(('MSTT', 'FXDustSimple01NoMesh', 'Effects\\Ambient\\FXDustSimple01NoMesh.NIF'), 1))
+
+    def test_engine_forms_and_the_unexpected(self):
+        self.assertEqual(self.r(None, 0x20), 'engine form (marker)')
+        self.assertEqual(self.r(None, 0x0100ABCD), 'base record not found')
+        # a visible object that was not converted must stand out, with its name
+        self.assertEqual(self.r(('STAT', 'RCSmDoorFrame03', 'Architecture\\RC\\SmDoorFrame03.nif'), 1), 'other: STAT RCSmDoorFrame03')
+        self.assertEqual(self.r(('MSTT', 'SomeRock', 'Landscape\\Rocks\\Rock01.nif'), 1), 'other: MSTT SomeRock')
+
+
+class ConvertScriptTests(unittest.TestCase):
+    """convert-fo3-assets.ps1 is exercised by hand on the real games; these checks keep its two fixes from being lost"""
+
+    def setUp(self):
+        with open(os.path.join(ROOT, 'convert-fo3-assets.ps1'), encoding='utf-8') as f:
+            self.src = f.read()
+
+    def test_meshes_are_made_safe_instead_of_being_removed_by_name(self):
+        self.assertIn('elric_prep.py', self.src)
+        self.assertNotIn('busshelter01', self.src)               # the hard-coded list of meshes removed before Elric (their objects were then missing)
+        self.assertNotIn('megatonrampstraightreg', self.src)
+
+    def test_crash_dumps_of_our_own_elric_runs_are_cleaned_up(self):
+        self.assertIn("Elrich.exe.*.dmp", self.src)
+        self.assertIn('$_.LastWriteTime -ge $since', self.src)    # never an older dump
+
+    def test_a_failed_archive_stops_the_stage_and_sources_are_kept(self):
+        self.assertIn('function Invoke-Archive2', self.src)
+        self.assertIn('throw', self.src.split('function Invoke-Archive2', 1)[1].split('foreach ($plugin', 1)[0])
+        # the extracted textures / meshes are deleted only after both archives were written
+        packing = self.src.split("Step 'Packing BA2 archives'", 1)[1]
+        self.assertLess(packing.index('Invoke-Archive2 "$plugin - Textures"'), packing.index('Remove-Item "$output\\$d"'))
+
+    def test_files_the_texture_archive_cannot_hold_are_left_out_before_it_runs(self):
+        self.assertIn("$_.Extension -ne '.dds'", self.src)
+
+
 if __name__ == '__main__':
     unittest.main()

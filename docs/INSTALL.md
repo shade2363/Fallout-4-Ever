@@ -38,14 +38,18 @@
 ## What the install changes on your PC
 * Adds the converted files to `Fallout 4\Data` (plugins, archives, a few loose meshes and videos). Anything it would replace is copied to the `backup` folder first.
 * Writes the list of installed files to `installed-files.txt` in your work folder.
-* Enables the plugins in `plugins.txt`, adds the loose-file settings to `Fallout4Custom.ini`, and sets `bEnableFileSelection=1` in `Fallout4Prefs.ini`. The previous values are
-  remembered so uninstalling puts them back.
+* **`plugins.txt` (`%LOCALAPPDATA%\Fallout4`): replaced by a clean list** with only this mod's plugins, because other mods that are enabled (a New Vegas port, say) would load
+  together with the Capital Wasteland. The list that was there is saved first in the `backup` folder of your work folder (`plugins.txt.pre-capital`) and the install says so.
+  To keep your other plugins enabled instead, build with `CapitalConvert.exe build --keep-other-plugins`. Fallout 4 loads its own master and DLC files without `plugins.txt`.
+* Sets `bEnableFileSelection=1` in `Fallout4Prefs.ini` (it is what makes the game read `plugins.txt`) and adds the loose-file settings to `Fallout4Custom.ini` if that file does not
+  exist. The previous values are remembered so uninstalling puts them back.
+* The last lines of the install log list all of this again, with the paths.
 * Never modifies the original Fallout 3 or Fallout 4 game files.
 
 ## Uninstall
 Close Fallout 4, open `CapitalConvert.exe` and press **Uninstall**. It shows a preview and asks first, then removes **only the
-files listed in `installed-files.txt`**, puts back any file it had replaced from `backup\`, and restores your `plugins.txt` and ini values.
-Your Fallout 3 and Fallout 4 game files are never touched.
+files listed in `installed-files.txt`**, puts back any file it had replaced from `backup\`, **puts your earlier `plugins.txt` list back** (plugins you added after the install stay) and
+restores your ini values. Your Fallout 3 and Fallout 4 game files are never touched.
 
 ## Test it without risk
 `-Sandbox <folder>` installs into a throw-away folder instead of Fallout 4, so you can look at the result first.

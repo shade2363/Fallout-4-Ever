@@ -3,8 +3,11 @@
   CapitalBuilder.exe                 -> window (detect, check, build, resume)
   CapitalBuilder.exe detect          -> print what was found and every problem
   CapitalBuilder.exe plan            -> list the stages and their state
-  CapitalBuilder.exe build [--from ID] [--only ID] [--workdir DIR] [--fo4 DIR] [--fo3 DATADIR] [--yes]
+  CapitalBuilder.exe build [--from ID] [--only ID] [--to ID] [--workdir DIR] [--fo4 DIR] [--fo3 DATADIR] [--yes]
+                           [--keep-other-plugins] [--no-special-screen]
   CapitalBuilder.exe status
+  CapitalBuilder.exe uninstall [--workdir DIR] [--yes]
+  CapitalBuilder.exe --help | <command> --help | --version   (print help / the version; nothing is started)
   CapitalBuilder.exe --script FILE.py [args...]   (internal: run a pipeline script with the bundled interpreter)
 
 The payload (our pipeline scripts + the third-party tools) is staged into a private work folder; every machine-specific path in the
@@ -137,6 +140,10 @@ def resolve_config(args, st):
     cfg['workdir'] = args.get('workdir') or cfg.get('workdir') or DEFAULT_WORK
     cfg['fo4'] = args.get('fo4') or cfg.get('fo4') or detect.find_fo4() or detect.find_fo4(scan=True)             # quick search first, then every fixed drive
     cfg['fo3_data'] = args.get('fo3') or cfg.get('fo3_data') or detect.find_fo3_data() or detect.find_fo3_data(scan=True)
+    if args.get('keep_other_plugins') is not None:                  # options the user can switch on or off; kept in the saved state like the folders
+        cfg['merge_plugins'] = bool(args['keep_other_plugins'])
+    if args.get('special_screen') is not None:
+        cfg['start_special'] = 'screen' if args['special_screen'] else 'default'
     return cfg
 
 
@@ -160,7 +167,11 @@ def preflight(cfg):
         problems.append(('error' if free < 60 else 'warn', 'Only %.0f GB free on %s: the build needs about 150 GB of working space (14 GB final output + conversion scratch).' % (free, drive)))
     if 0 <= ram < 32:
         problems.append(('error' if ram < 24 else 'warn', 'Only %.0f GB RAM: the base-world conversion peaked at ~20 GB working set (32 GB recommended).' % ram))
-    if cfg.get('fo4') and cfg.get('fo3_data') and os.path.splitdrive(cfg['fo3_data'])[0].lower() == os.path.splitdrive(wd)[0].lower() and False:
+    try:
+        w = detect.oversize_window_warning()
+        if w:
+            problems.append(('warn', w))
+    except Exception:
         pass
     return facts, problems
 
@@ -173,12 +184,43 @@ def python_cmd():
     return [sys.executable]
 
 
+def python_shim(workdir):
+    """The PowerShell steps of the pipeline call  python script.py ...  and a PC that only has this program has no python on the PATH.  Folder with a python.cmd that
+    runs those calls through this program (--script); put in front of PATH while a stage runs.  Only the packaged program needs it."""
+    d = os.path.join(workdir, 'shim')
+    os.makedirs(d, exist_ok=True)
+    cmd = os.path.join(d, 'python.cmd')
+    text = '@echo off\r\n"%CAPITAL_PY%" --script %*\r\nexit /b %errorlevel%\r\n'
+    try:
+        with open(cmd, encoding='ascii', errors='replace', newline='') as f:
+            current = f.read()
+    except OSError:
+        current = None
+    if current != text:
+        with open(cmd, 'w', encoding='ascii', newline='') as f:
+            f.write(text)
+    return d
+
+
+def script_env(cfg):
+    """environment of the PowerShell steps: how they run our python scripts (packaged program: itself with --script; there is no python on the PATH) and the user's options"""
+    frozen = getattr(sys, 'frozen', False)
+    env = {'CAPITAL_PY': sys.executable, 'CAPITAL_PY_ARGS': '--script' if frozen else ''}
+    if frozen:
+        env['PATH'] = python_shim(cfg['workdir']) + os.pathsep + os.environ.get('PATH', '')
+    if cfg.get('merge_plugins'):
+        env['CAPITAL_MERGE_PLUGINS'] = '1'
+    return env
+
+
 def run_stage(stage, cfg, log, state):
     wd = cfg['workdir']
     env = dict(os.environ)
     env.update({'FO4_DIR': cfg['fo4'], 'FO3_DATA': cfg['fo3_data'], 'CAPITAL_ROOT': wd, 'PYTHONIOENCODING': 'utf-8', 'PYTHONUTF8': '1'})
+    env.update(script_env(cfg))
     def sub(a):
-        return a.replace('{wd}', wd).replace('{fo3}', cfg['fo3_data']).replace('{fo4}', cfg['fo4'])
+        return (a.replace('{wd}', wd).replace('{fo3}', cfg['fo3_data']).replace('{fo4}', cfg['fo4'])
+                 .replace('{special}', cfg.get('start_special') or 'screen'))
     for step in stage['steps']:
         kind, *rest = step if isinstance(step, (list, tuple)) else (step,)
         rest = [sub(a) if isinstance(a, str) else a for a in rest]
@@ -264,11 +306,18 @@ def _add_tree(h, wd, rel):
         h.update(open(f, 'rb').read())
 
 
-def stage_hash(stage, wd):
-    """fingerprint of everything that decides what a stage produces from the same game files: its steps, the scripts they run, the pinned tools"""
+STAGE_OPTIONS = {'16-start': ('start_special', 'screen'), '18-install': ('merge_plugins', False)}       # stage -> (option in the saved config, default): a changed option re-runs the stage
+STAGE_EXTRA_DEPS = {'02-assets': ['worldfix/elric_prep.py', 'worldfix/add_door_anim.py', 'packaging/common.ps1']}       # files a stage reads without naming them in its steps
+
+
+def stage_hash(stage, wd, cfg=None):
+    """fingerprint of everything that decides what a stage produces from the same game files: its steps, the scripts they run, the pinned tools, the user's options"""
     import hashlib
     h = hashlib.sha256()
     h.update(repr((stage['id'], stage['steps'])).encode())
+    opt = STAGE_OPTIONS.get(stage['id'])
+    if opt and cfg is not None and cfg.get(opt[0], opt[1]) != opt[1]:
+        h.update(('option:%s=%s' % (opt[0], cfg.get(opt[0]))).encode())              # absent / default adds nothing: states from before the option keep their hash
     deps = []
     for step in stage['steps']:
         kind, *rest = step if isinstance(step, (list, tuple)) else (step,)
@@ -284,6 +333,7 @@ def stage_hash(stage, wd):
             h.update(('call:%s:%s' % (rest[0], STEPS_REV)).encode())
     if stage['id'] in TOOL_STAGES:
         deps.append('builder/tools.lock.json')
+    deps += STAGE_EXTRA_DEPS.get(stage['id'], [])
     for d in sorted(set(deps)):
         _add_tree(h, wd, d)
     return h.hexdigest()
@@ -294,7 +344,7 @@ def invalidate_changed(cfg, st, log):
     hashes = st.setdefault('hashes', {})
     stale = None
     for s in STAGES:
-        cur = stage_hash(s, cfg['workdir'])
+        cur = stage_hash(s, cfg['workdir'], cfg)
         old = hashes.get(s['id'])
         if s['id'] in st['done'] and old is not None and old != cur and stale is None:
             stale = s['id']
@@ -352,7 +402,7 @@ def build(cfg, log, start=None, only=None, to=None, st=None, stop_flag=lambda: F
                 log('  (optional stage: continuing)')
                 continue
             return False
-        st.setdefault('hashes', {})[stage['id']] = stage_hash(stage, cfg['workdir'])
+        st.setdefault('hashes', {})[stage['id']] = stage_hash(stage, cfg['workdir'], cfg)
         st['done'][stage['id']] = {'when': time.strftime('%Y-%m-%d %H:%M:%S'), 'secs': round(time.time() - t0)}
         save_state(cfg['workdir'], st)
         log('[%s] done in %d s' % (stage['id'], time.time() - t0))
@@ -367,20 +417,55 @@ def build(cfg, log, start=None, only=None, to=None, st=None, stop_flag=lambda: F
 
 
 # ------------------------------------------------------------------------------------------------------ cli
+def make_parser():
+    import argparse
+    ap = argparse.ArgumentParser(prog='CapitalConvert', formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 description='Fallout 4-Ever: builds the Fallout 3 world inside your own copy of Fallout 4, from your own copy of Fallout 3.\n'
+                                             'Started without a command it opens the window.',
+                                 epilog='"CapitalConvert <command> --help" shows the options of one command.')
+    ap.add_argument('--version', action='version', version='Fallout 4-Ever %s' % VERSION)
+    sub = ap.add_subparsers(dest='cmd', metavar='<command>', title='commands')
+
+    def add(name, text, games=False, workdir=True):
+        p = sub.add_parser(name, help=text, description=text, formatter_class=argparse.RawDescriptionHelpFormatter)
+        if workdir:
+            p.add_argument('--workdir', metavar='DIR', help='work folder (default: %s)' % DEFAULT_WORK)
+        if games:
+            p.add_argument('--fo4', metavar='DIR', help='the Fallout 4 folder (default: found automatically)')
+            p.add_argument('--fo3', metavar='DIR', help='the Fallout 3 Data folder (default: found automatically)')
+        return p
+    add('detect', 'print the games that were found and every problem', games=True)
+    add('plan', 'list the stages of the build and which are done', games=True)
+    b = add('build', 'run the build; stages that are already done are skipped, a failed one is retried', games=True)
+    b.add_argument('--from', dest='from', metavar='ID', help='start at this stage (see "plan")')
+    b.add_argument('--only', metavar='ID', help='run only this stage')
+    b.add_argument('--to', metavar='ID', help='stop after this stage')
+    b.add_argument('--yes', action='store_true', help='go on although the checks found errors')
+    b.add_argument('--keep-other-plugins', action=argparse.BooleanOptionalAction, default=None,
+                   help='keep the plugins that are already enabled in plugins.txt (default: a clean list with only this mod; your list is saved and the uninstall puts it back)')
+    b.add_argument('--special-screen', action=argparse.BooleanOptionalAction, default=None,
+                   help='show the SPECIAL screen after the character editor at New Game (default: yes; --no-special-screen gives the character the default stats '
+                        'instead, for a PC where the screen\'s Done button cannot be reached)')
+    add('status', 'print the saved build state (JSON)')
+    u = add('uninstall', 'remove what the install added to Fallout 4 and put back what it replaced; without --yes it only shows what it would do')
+    u.add_argument('--yes', action='store_true', help='really remove the files')
+    add('update-check', 'ask GitHub for a newer release (only when you run this)', workdir=False)
+    add('update-install', 'download and install the newest signed update of the scripts', workdir=False)
+    add('update-rollback', 'go back to the previous scripts', workdir=False)
+    return ap
+
+
 def parse(argv):
+    """-> dict with cmd (None = open the window), yes, workdir, fo4, fo3, from, only, to, keep_other_plugins, special_screen; --help / -h / -? / help [command] print the help and exit 0,
+    a mistake prints the usage and exits 2 (nothing is started, so "uninstall --help" can no longer run an uninstall)"""
+    argv = list(argv)
+    if argv[:1] in (['/?'], ['-?']):
+        argv = ['--help']
+    elif argv[:1] == ['help']:
+        argv = argv[1:2] + ['--help']
+    ns = make_parser().parse_args(argv)
     a = {'cmd': None, 'yes': False}
-    i = 0
-    while i < len(argv):
-        t = argv[i]
-        if t in ('--workdir', '--fo4', '--fo3', '--from', '--only', '--to') and i + 1 < len(argv):
-            a[t[2:]] = argv[i + 1]
-            i += 2
-            continue
-        if t == '--yes':
-            a['yes'] = True
-        elif not t.startswith('--') and a['cmd'] is None:
-            a['cmd'] = t
-        i += 1
+    a.update({k: v for k, v in vars(ns).items() if v is not None})
     return a
 
 
@@ -459,8 +544,11 @@ def main(argv):
         argv = ['--script'] + list(argv)                             # the pipeline scripts call sys.executable <script.py>: inside the packaged exe that means --script
     if argv[:1] == ['--script']:                                     # internal: run a pipeline script inside the bundled interpreter
         import runpy
-        script = argv[1]
-        sys.argv = [script] + argv[2:]
+        rest = argv[1:]
+        while rest and rest[0] in ('-I', '-E', '-s', '-S', '-B', '-u', '-O'):          # the options of a plain  python -I script.py  call (see python_shim)
+            rest = rest[1:]
+        script = rest[0]
+        sys.argv = [script] + rest[1:]
         sys.path.insert(0, os.path.dirname(script))
         runpy.run_path(script, run_name='__main__')
         return 0

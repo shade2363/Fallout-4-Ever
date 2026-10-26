@@ -1,220 +1,358 @@
 {
  "files": [
   {
+   "path": "CREDITS.md",
+   "sha256": "1a85edae05aa8db389dfd5df98fc56451dd1ca20b204332bf456b5a9189a5ea8",
+   "origin": "repo"
+  },
+  {
    "path": "actors/name_actors.py",
-   "sha256": "45f109503ee50212e7c2246456694474509028c55b7341585af60b0b477649b9"
+   "sha256": "45f109503ee50212e7c2246456694474509028c55b7341585af60b0b477649b9",
+   "origin": "dev"
   },
   {
    "path": "actors/name_disabled.py",
-   "sha256": "35090ae703704d5eb901315cd05e500d7e7a0c0e856ac169f5a90cc28a80f969"
+   "sha256": "5033f47c980cd5d4f32ed48a20797b45d37b5a68c1a7e18f7a1ff15d56bbeb27",
+   "origin": "dev",
+   "dev_sha256": "35090ae703704d5eb901315cd05e500d7e7a0c0e856ac169f5a90cc28a80f969"
   },
   {
    "path": "actors/name_more_actors.py",
-   "sha256": "bdb32398b4ffbd1b7926c43f22df9ddc567bc8a7662eb1b2efef18697c954dab"
+   "sha256": "f4eae158470e862c3b13fd4f350afc16754e4c0e904b8dadd227072e5c97f00b",
+   "origin": "dev",
+   "dev_sha256": "bdb32398b4ffbd1b7926c43f22df9ddc567bc8a7662eb1b2efef18697c954dab"
   },
   {
    "path": "build-actor-map.ps1",
-   "sha256": "5a737ff73a32afb32bff66cd779ce398a15c7a6dacd9f5b9815ec1704e5037f4"
+   "sha256": "5a737ff73a32afb32bff66cd779ce398a15c7a6dacd9f5b9815ec1704e5037f4",
+   "origin": "dev"
   },
   {
    "path": "builder/capital_builder.py",
-   "sha256": "c6a9d4ac652811920dc223182f92bec20324267de452d74e453ff6d2d9b21691"
+   "sha256": "b02cf0e399a48090dac4715d501f74aa489e0a2d8a7eb6393b15b0e236ecd668",
+   "origin": "dev",
+   "dev_sha256": "c6a9d4ac652811920dc223182f92bec20324267de452d74e453ff6d2d9b21691"
   },
   {
    "path": "builder/detect.py",
-   "sha256": "4188672b1727b34b587df2bb12d252ffce28b4868fb3ecc4ed166147b7665d99"
+   "sha256": "a14ec6fd494826e2ac2417e5efd4280ce98e004105cfda69cf59519a7ecb8e89",
+   "origin": "dev",
+   "dev_sha256": "4188672b1727b34b587df2bb12d252ffce28b4868fb3ecc4ed166147b7665d99"
+  },
+  {
+   "path": "builder/fetch_tools.py",
+   "sha256": "a2f5b8d2a56d379e18c98c25b5ee591848f364225daeff86a1c02df0baadf7bc",
+   "origin": "repo"
   },
   {
    "path": "builder/gui.py",
-   "sha256": "834377a85e497ae9ded0ca345a959ef18e235f7af732f904b841dbd716dc4a78"
+   "sha256": "a4241c6511f9896aff5a33388db1ea16cf62b254fc568d809de6c5aa67782759",
+   "origin": "dev",
+   "dev_sha256": "834377a85e497ae9ded0ca345a959ef18e235f7af732f904b841dbd716dc4a78"
+  },
+  {
+   "path": "builder/logfilter.py",
+   "sha256": "0ae1fccc22cca3883aa2b12f95e072dc445d469f95aa28dbca3a767f68ce1466",
+   "origin": "repo"
   },
   {
    "path": "builder/make_exe.py",
-   "sha256": "61ff68070b6b971193a33c66457696021103f09000ddbe70946ff512be91cb17"
+   "sha256": "75d6a2489fb18badc773f1bb999f875279df9d676644940e44ea318b2662ce1c",
+   "origin": "dev",
+   "dev_sha256": "61ff68070b6b971193a33c66457696021103f09000ddbe70946ff512be91cb17"
   },
   {
    "path": "builder/stages.py",
-   "sha256": "a47817459819c66a2e76bed4e8a7eaf5f29fd6484d2625022d98cc3f38341718"
+   "sha256": "a284b7888ff6da40a2d80fc55998de66ec8dc5516588fa1c2ed76a6345205ff6",
+   "origin": "dev",
+   "dev_sha256": "a47817459819c66a2e76bed4e8a7eaf5f29fd6484d2625022d98cc3f38341718"
   },
   {
    "path": "builder/steps.py",
-   "sha256": "767ca9b867b4c6fa4233626287892dfffd02600eff68192507ed007ef6acf63c"
+   "sha256": "b1cee66436d6484073b22b822c1fd18d8c5ba1fe09cea4afd62c8393ffe98061",
+   "origin": "dev",
+   "dev_sha256": "767ca9b867b4c6fa4233626287892dfffd02600eff68192507ed007ef6acf63c"
+  },
+  {
+   "path": "builder/tools.lock.json",
+   "sha256": "7fd7e9787f231bb83ceb046bfd94c219ea49ca523f5aeb544a9402795ded85f7",
+   "origin": "repo"
+  },
+  {
+   "path": "builder/update_key.py",
+   "sha256": "cea786dc24c9e094d95a590c849568c65f09a1f6b5f1b3e77b12b7fd36c1d4cc",
+   "origin": "repo"
+  },
+  {
+   "path": "builder/updater.py",
+   "sha256": "40d9cf107299e533449b234f10baccf2f313eeec6caa103a4fff2c8c1fd367de",
+   "origin": "repo"
+  },
+  {
+   "path": "builder/version.py",
+   "sha256": "1a44a4867d820d8fdbd92ac4c8d077301a770331c11275bdd58a982cd6f6a3e9",
+   "origin": "repo"
+  },
+  {
+   "path": "builder/wasteland_art.py",
+   "sha256": "1f9da7c94ed5a9b51113ec7cf1d4a2983836c308c5b6af7fd9ea4c45b2856919",
+   "origin": "repo"
   },
   {
    "path": "builder/xedit_auto.py",
-   "sha256": "7d35e4c0e3f17436cb8e15a2605a36baf5f2bab380505b16a8d7972ea06fd5f7"
-  },
-  {
-   "path": "capital-profile.ps1",
-   "sha256": "a8a39871621d667b6467cba62cbcbfe71e6aed6a4037c13926fa3234e369174a"
+   "sha256": "7d35e4c0e3f17436cb8e15a2605a36baf5f2bab380505b16a8d7972ea06fd5f7",
+   "origin": "dev"
   },
   {
    "path": "convert-fo3-assets.ps1",
-   "sha256": "15ad6025dc3c14ac9ff3460de045b67bdc844a83d5987e1b4d7632eed8a0fe11"
+   "sha256": "e4c073c4edad879f6ba2e912e501bd766a03bbee1339f5f4b4a55a6eb08d69c3",
+   "origin": "dev",
+   "dev_sha256": "15ad6025dc3c14ac9ff3460de045b67bdc844a83d5987e1b4d7632eed8a0fe11"
   },
   {
    "path": "install-output.ps1",
-   "sha256": "5eb52423789459ce8ec3a3dd0a8d72563fa1ba976516abb26f20e24d2be07b1f"
+   "sha256": "29cec47717ced0c28b94075a45e1c8227fb47f3cc4d5bdf3be18bb7673833ed1",
+   "origin": "dev",
+   "dev_sha256": "5eb52423789459ce8ec3a3dd0a8d72563fa1ba976516abb26f20e24d2be07b1f"
   },
   {
    "path": "navmesh/convert_navmesh.py",
-   "sha256": "c77379d0fd563eddca355360fb354e07a76f87c076d8b2b8169c35b15af8091c"
+   "sha256": "b391e8429028c7a870b19e7d9c082a6ca14ea9ef5459607427a623d59ae41259",
+   "origin": "dev",
+   "dev_sha256": "c77379d0fd563eddca355360fb354e07a76f87c076d8b2b8169c35b15af8091c"
   },
   {
    "path": "navmesh/navlib.py",
-   "sha256": "7129007a48f7b9151a72485b8cf614f3d4ab5d344f014fa5bd299d1ce2665b9e"
+   "sha256": "7129007a48f7b9151a72485b8cf614f3d4ab5d344f014fa5bd299d1ce2665b9e",
+   "origin": "dev"
   },
   {
    "path": "packaging/ba2_tool.py",
-   "sha256": "2e0b00263dd6b41c22ea07fe7313a9ce42267c9032eafbe5f40665962d30aa95"
+   "sha256": "2e0b00263dd6b41c22ea07fe7313a9ce42267c9032eafbe5f40665962d30aa95",
+   "origin": "dev"
   },
   {
    "path": "packaging/common.ps1",
-   "sha256": "29c2deb6c68a419cf3d290fbcf66d44b1725e75006464e1a0f9932a49b483ce2"
+   "sha256": "d4a2e39dac53c2aefb1cb4c8e396f294821c7b39c645ac6c218a7a69efdd4d8d",
+   "origin": "dev",
+   "dev_sha256": "29c2deb6c68a419cf3d290fbcf66d44b1725e75006464e1a0f9932a49b483ce2"
   },
   {
    "path": "packaging/pack_ba2.ps1",
-   "sha256": "c9468fd34ddbdb7e9a0c678386ad3383c363d4814e0d8f545154ed189ab53a86"
+   "sha256": "c9468fd34ddbdb7e9a0c678386ad3383c363d4814e0d8f545154ed189ab53a86",
+   "origin": "dev"
   },
   {
    "path": "packaging/stage_dds.py",
-   "sha256": "ac0e8c4704e14215b75c17b7a5605a4a1bca6d30e420406899d11bf26888e93e"
+   "sha256": "ac0e8c4704e14215b75c17b7a5605a4a1bca6d30e420406899d11bf26888e93e",
+   "origin": "dev"
   },
   {
    "path": "rename-master.ps1",
-   "sha256": "cf36835a3339de01ad92e4b0d880cf822ef8248e05b5faa7899af54966c40abd"
+   "sha256": "3f48b0887b45a233f886b7e73a9c44fb41fc5a4937b44f67fd31d2a97b6db5b6",
+   "origin": "dev",
+   "dev_sha256": "cf36835a3339de01ad92e4b0d880cf822ef8248e05b5faa7899af54966c40abd"
+  },
+  {
+   "path": "start/CapStartDemo.psc.tmpl",
+   "sha256": "87b962a32929eeec52a494a6eb7c282372f02309ba7ec90360f671e1ebdf05aa",
+   "origin": "repo"
+  },
+  {
+   "path": "start/QF_MQ101_0001ED86.psc.tmpl",
+   "sha256": "795363edb1af9a8d2f66c6d6372da3fa57b12d6ae6d55111096763d03b1187fd",
+   "origin": "repo"
+  },
+  {
+   "path": "start/build_start.py",
+   "sha256": "8b2ee8b497e5c936ec06b4388a5b7b7e378fbb7413a7bd8f1a3c142c2fb0cf3d",
+   "origin": "repo"
   },
   {
    "path": "tests/crashers.txt",
-   "sha256": "a74a938d05c7d264564900bb2df41798624320994dc31144b52a244c11199615"
+   "sha256": "a74a938d05c7d264564900bb2df41798624320994dc31144b52a244c11199615",
+   "origin": "dev"
   },
   {
    "path": "tool/xedit/Edit Scripts/FO3 - Export actors.pas",
-   "sha256": "22e60fee53e4b0461753c1e0471ead3b7d0f4174aadcb27696c8f499214d895a"
+   "sha256": "22e60fee53e4b0461753c1e0471ead3b7d0f4174aadcb27696c8f499214d895a",
+   "origin": "dev"
   },
   {
    "path": "tool/xedit/Edit Scripts/FO3 and FNV - Translator.pas",
-   "sha256": "aa801a8989747b59479d2b685f56a61d3fc84b9af2b45722aad4af2fa225ec10"
+   "sha256": "1f9ff05a3225d2f3f87a2c8d6adb39f0af6739aa708d67cde862bb98dc3f8b29",
+   "origin": "dev",
+   "dev_sha256": "aa801a8989747b59479d2b685f56a61d3fc84b9af2b45722aad4af2fa225ec10"
   },
   {
    "path": "tool/xedit/Edit Scripts/FO4 - List NPC templates.pas",
-   "sha256": "02ffd26ed505816f70a613b2a7c32838ca8d512e614c3b53c9b388f3eab9a115"
+   "sha256": "02ffd26ed505816f70a613b2a7c32838ca8d512e614c3b53c9b388f3eab9a115",
+   "origin": "dev"
   },
   {
    "path": "tool/xedit/Edit Scripts/FO4 - List actors.pas",
-   "sha256": "7ece0e13e5c44c2511d339d16822f3b7bdbddf88adb67792463771696a30eac5"
+   "sha256": "7ece0e13e5c44c2511d339d16822f3b7bdbddf88adb67792463771696a30eac5",
+   "origin": "dev"
   },
   {
    "path": "tool/xedit/Edit Scripts/FO4 - Place actors.pas",
-   "sha256": "0116513cd669abd24ac9486d4ec3c562ee8717d7ddddc187e10f33c81689f986"
+   "sha256": "0116513cd669abd24ac9486d4ec3c562ee8717d7ddddc187e10f33c81689f986",
+   "origin": "dev"
   },
   {
    "path": "tools/make_blank_bik.py",
-   "sha256": "b43ede388c9d7193278773258ff760fe8e0fe77431c061555e01e600fa4feaed"
+   "sha256": "b43ede388c9d7193278773258ff760fe8e0fe77431c061555e01e600fa4feaed",
+   "origin": "dev"
   },
   {
    "path": "tools/patch_bink_track.py",
-   "sha256": "1f1ba85c03ea7a1026f84b1c84665441b181f00fcfbb5ee1e5a44383480040bf"
+   "sha256": "1f1ba85c03ea7a1026f84b1c84665441b181f00fcfbb5ee1e5a44383480040bf",
+   "origin": "dev"
   },
   {
    "path": "worldfix/add_door_anim.py",
-   "sha256": "1e86a51c180a46b9fcacb113f8f9dc0765467aa6de4c09b3241e02be5ec10cc4"
+   "sha256": "1e86a51c180a46b9fcacb113f8f9dc0765467aa6de4c09b3241e02be5ec10cc4",
+   "origin": "dev"
   },
   {
    "path": "worldfix/add_terminal_hybrid.py",
-   "sha256": "1dc1749c1abfb67f10d6a037b17562ca6b9154bda764e6fe6f35c4acdbd34f5e"
+   "sha256": "1dc1749c1abfb67f10d6a037b17562ca6b9154bda764e6fe6f35c4acdbd34f5e",
+   "origin": "dev"
   },
   {
    "path": "worldfix/add_terminal_screen.py",
-   "sha256": "18793a4c5a9cb1e7a0cba641bfce31dd95da10cdb7f9d1273ca8f0cde3e34abf"
+   "sha256": "18793a4c5a9cb1e7a0cba641bfce31dd95da10cdb7f9d1273ca8f0cde3e34abf",
+   "origin": "dev"
   },
   {
    "path": "worldfix/apply-fixes.ps1",
-   "sha256": "c4658e86f63446f79bc92d66ee23920eafa85b34e0255f6f102908305e3f6eab"
+   "sha256": "c4658e86f63446f79bc92d66ee23920eafa85b34e0255f6f102908305e3f6eab",
+   "origin": "dev"
   },
   {
    "path": "worldfix/audit_meshes.py",
-   "sha256": "6d7a415f0767c6f78451b70cc42eb074a6fcfce4b098c0eff929b77666e61dfd"
+   "sha256": "0462792299f5b692866b7a4827299d175a5c0f77672a73adccecce96c0d00879",
+   "origin": "dev",
+   "dev_sha256": "6d7a415f0767c6f78451b70cc42eb074a6fcfce4b098c0eff929b77666e61dfd"
   },
   {
    "path": "worldfix/ba2_extract.py",
-   "sha256": "3090f5c5ea96cc21145c007c93d35f7ab976b13bc79cf87608db03a781f4df74"
+   "sha256": "3090f5c5ea96cc21145c007c93d35f7ab976b13bc79cf87608db03a781f4df74",
+   "origin": "dev"
   },
   {
    "path": "worldfix/bsa_extract.py",
-   "sha256": "960ce83ff04723abd864ef932774dc547463a3535aa7b944d476c30c4628c37f"
+   "sha256": "960ce83ff04723abd864ef932774dc547463a3535aa7b944d476c30c4628c37f",
+   "origin": "dev"
   },
   {
    "path": "worldfix/build_door_anims.py",
-   "sha256": "a096fe9692d1bd20cf240fbc4865ef9c0fea7b16ab48a6dee4c853a5f013b7b0"
+   "sha256": "075a6d14cf17306887b8da39544c2488081df20f66663a52c85acf0ff850058a",
+   "origin": "dev",
+   "dev_sha256": "a096fe9692d1bd20cf240fbc4865ef9c0fea7b16ab48a6dee4c853a5f013b7b0"
   },
   {
    "path": "worldfix/convert_missing.py",
-   "sha256": "6437eed1a2ad27c32debefe09a4dd7da71257ac7ddeec910d5af5e37e6a40858"
+   "sha256": "bc65a0245fab02a81a12856242b77d07ee81727a6f75f400c21ed5ebc78514b4",
+   "origin": "dev",
+   "dev_sha256": "6437eed1a2ad27c32debefe09a4dd7da71257ac7ddeec910d5af5e37e6a40858"
   },
   {
    "path": "worldfix/convert_single_mesh.py",
-   "sha256": "87bafcbff0b886d7e49d989818add3e63e3df2a90af53e1087bf8434aec4573f"
+   "sha256": "96a7d0d77fd178dce0c95bf57310aa5b69dfd7b1ab517a82d2fd2f0ceab93c23",
+   "origin": "dev",
+   "dev_sha256": "87bafcbff0b886d7e49d989818add3e63e3df2a90af53e1087bf8434aec4573f"
+  },
+  {
+   "path": "worldfix/elric_prep.py",
+   "sha256": "fa63cb84c02bef3be8c1e6bcbc093dca873a03c5b55273575c8a4d11ec8584f4",
+   "origin": "repo"
   },
   {
    "path": "worldfix/fix_crashers.py",
-   "sha256": "6a5c935b3781ff075e2f59cffbf7f567f18b10c15db8b0480a7f786c57f80ef1"
+   "sha256": "6a5c935b3781ff075e2f59cffbf7f567f18b10c15db8b0480a7f786c57f80ef1",
+   "origin": "dev"
   },
   {
    "path": "worldfix/fix_enable_state.py",
-   "sha256": "cec40e6730be17a0ced4effc58df3fb068ebec943fcc569555aa6907c7972f16"
+   "sha256": "e6087aa82ebc4061f848ea8a61244134ea6d1b3a0ce076a5f6ee82eef9908a76",
+   "origin": "dev",
+   "dev_sha256": "cec40e6730be17a0ced4effc58df3fb068ebec943fcc569555aa6907c7972f16"
   },
   {
    "path": "worldfix/fix_interior_lighting.py",
-   "sha256": "bea32fd11ce4f1d2cf3ff1a2281bdd3bc9830ebd5444a601a8b451d2033bdb12"
+   "sha256": "bea32fd11ce4f1d2cf3ff1a2281bdd3bc9830ebd5444a601a8b451d2033bdb12",
+   "origin": "dev"
   },
   {
    "path": "worldfix/fix_nif_anim_collision.py",
-   "sha256": "24c67e5f1b547884ec806de6f738bd84d6301dd4e59339b4dd88b626abc586a3"
+   "sha256": "24c67e5f1b547884ec806de6f738bd84d6301dd4e59339b4dd88b626abc586a3",
+   "origin": "dev"
   },
   {
    "path": "worldfix/fix_regions.py",
-   "sha256": "1c5f0185e22c4a23c51e7889970c015066cee3993ea04740f51f821aba1fee1d"
+   "sha256": "ddac8eeb21043247d823dc88b7752b542c97ffc65fb3607e788786930e3b6362",
+   "origin": "dev",
+   "dev_sha256": "1c5f0185e22c4a23c51e7889970c015066cee3993ea04740f51f821aba1fee1d"
   },
   {
    "path": "worldfix/fix_stub_cells.py",
-   "sha256": "4497f6e951c06efd017345a7a944985820b34f5fb01e4897ae6acaabe9fbadfe"
+   "sha256": "4497f6e951c06efd017345a7a944985820b34f5fb01e4897ae6acaabe9fbadfe",
+   "origin": "dev"
   },
   {
    "path": "worldfix/fix_terminal_refs.py",
-   "sha256": "5b9473f3a25699b19200959443e53e07b46944eb1603177e87d922039fe63c4b"
+   "sha256": "5b9473f3a25699b19200959443e53e07b46944eb1603177e87d922039fe63c4b",
+   "origin": "dev"
   },
   {
    "path": "worldfix/lock_terminals.py",
-   "sha256": "c373aab9417df2aa9fb848e8398c7316f8ebf712761d432db0dceca2be36e24b"
+   "sha256": "899089746ebfeb52e59b748c497eb74b79e92447e9bbcb204f3edb0bcdd05ccd",
+   "origin": "dev",
+   "dev_sha256": "c373aab9417df2aa9fb848e8398c7316f8ebf712761d432db0dceca2be36e24b"
   },
   {
    "path": "worldfix/make_empty_plugin.py",
-   "sha256": "3e276fae70fab69ad6ff5e43f063857fafc01ca4f7f6ae2c47d2f45c16059e8a"
+   "sha256": "3e276fae70fab69ad6ff5e43f063857fafc01ca4f7f6ae2c47d2f45c16059e8a",
+   "origin": "dev"
   },
   {
    "path": "worldfix/place_disabled_actors.py",
-   "sha256": "d6107a63a16319448cadf748ef66c445ae4dcf7222995d26b7bbe02d9ed70895"
+   "sha256": "d6107a63a16319448cadf748ef66c445ae4dcf7222995d26b7bbe02d9ed70895",
+   "origin": "dev"
+  },
+  {
+   "path": "worldfix/ref_reasons.py",
+   "sha256": "f283b57dca06bbe3587337cf2628534988d373293f3f2dbef7166863a8f6054d",
+   "origin": "repo"
   },
   {
    "path": "worldfix/restore_actors.py",
-   "sha256": "e0bd3ac63acbec6c78820f2810f43a78ae39f8755be26538090c6bb04766d90e"
+   "sha256": "e0bd3ac63acbec6c78820f2810f43a78ae39f8755be26538090c6bb04766d90e",
+   "origin": "dev"
   },
   {
    "path": "worldfix/restore_dlc_refs.py",
-   "sha256": "9339997ae70bcd009d3e26531763c57707d7697e45b75a5fb5cc3bf52dc3d1b3"
+   "sha256": "67354a943657a030ebf9aaaebd5feffe5ee7ae885589c2978738462533731b7f",
+   "origin": "dev",
+   "dev_sha256": "9339997ae70bcd009d3e26531763c57707d7697e45b75a5fb5cc3bf52dc3d1b3"
   },
   {
    "path": "worldfix/restore_refs.py",
-   "sha256": "f1dd6d574b6dc637a7dd65b2bfe69f65f2cb32537371de85422da102f76a437c"
+   "sha256": "4f67d06ae40595ec514969e988e6d3119080c9fd770c90f1b9dd23591c4335e9",
+   "origin": "dev",
+   "dev_sha256": "f1dd6d574b6dc637a7dd65b2bfe69f65f2cb32537371de85422da102f76a437c"
   },
   {
    "path": "worldfix/scan_animated_nifs.py",
-   "sha256": "f421c280f8f9c2e2d25a3d61ea49058570f0c90ea5d9ee806a64af5aeb55e8b0"
+   "sha256": "f421c280f8f9c2e2d25a3d61ea49058570f0c90ea5d9ee806a64af5aeb55e8b0",
+   "origin": "dev"
   },
   {
    "path": "worldfix/terminal_models.json",
-   "sha256": "487daddaffa083948b5aefa36802e2b10e2c957c2e93eb15c02ea9361b57d34e"
+   "sha256": "3854ecca0c6e974ac625689cd5dc41efc71add95fbab1407e7ec060a7e25305f",
+   "origin": "dev",
+   "dev_sha256": "487daddaffa083948b5aefa36802e2b10e2c957c2e93eb15c02ea9361b57d34e"
   }
  ]
 }

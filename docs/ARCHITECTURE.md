@@ -59,5 +59,8 @@ tool from a tree that passed a gate (no game files, no credentials, no private p
 Maintainer details: [publish/README.md](../publish/README.md).
 
 ## Tests
-`python -m unittest discover -s tests` runs the offline tests (updates and signatures, change detection, game detection on simulated installs, the start builder, the publish gate).
+`python -m unittest discover -s tests` runs the offline tests (updates and signatures, change detection, game detection on simulated installs, the start builder, the publish gate,
+the command line, the mesh preparation for Elric, the install on a throw-away sandbox: its plugin list and uninstall, and that `SYNC-MANIFEST.json` still describes the payload).
+`SYNC-MANIFEST.json` fingerprints the program payload; after editing a payload file run `python tools/verify_manifest.py --update`, and
+`python tools/verify_manifest.py --root dist\CapitalConvert\_internal\payload` proves a built program carries exactly the files of this repository.
 `python tools/smoke_exe.py` runs the *packaged* exe the way a stranger would. Game-dependent checks are listed in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).

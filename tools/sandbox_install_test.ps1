@@ -13,6 +13,10 @@ New-Item -ItemType Directory -Force (Join-Path $data 'Meshes\Capital'), (Join-Pa
 'someone elses file' | Set-Content (Join-Path $data 'Meshes\Capital\keep1.txt'); 'someone elses file' | Set-Content (Join-Path $data 'Sound\fo3\keep2.txt')
 [IO.File]::WriteAllText((Join-Path $my 'Fallout4Prefs.ini'), "[Launcher]`r`nbEnableFileSelection=0`r`n[Display]`r`niSize W=1920`r`n")
 $prefsBefore = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $my 'Fallout4Prefs.ini')))
+# the player's own plugin list: another mod is enabled before the install (it must not load together with the Capital Wasteland, and must be back after the uninstall)
+$plDir = Join-Path $Sandbox 'LocalAppData\Fallout4'; New-Item -ItemType Directory -Force $plDir | Out-Null
+$plSeed = "# This file is used by Fallout4 to keep track of your downloaded content.`r`n*SomeOtherMod.esp`r`n"
+[IO.File]::WriteAllText((Join-Path $plDir 'plugins.txt'), $plSeed)
 function Run($more) { & powershell -NoProfile -ExecutionPolicy Bypass -File $ps1 -Sandbox $Sandbox -OutDir $out @more 2>&1 | Out-String }
 
 $t = Run @(); $m = [regex]::Match($t, 'Done: (\d+) files copied.*?(\d+) failed')
@@ -25,6 +29,8 @@ $pl = Get-Content (Join-Path $Sandbox 'LocalAppData\Fallout4\plugins.txt') -Erro
 $want = 'Fallout3.esm', 'Anchorage.esm', 'ThePitt.esm', 'BrokenSteel.esm', 'PointLookout.esm', 'Zeta.esm', 'CapitalActors.esp', 'CapitalNavmesh.esp', 'CapitalFixes.esp', 'CapitalStart.esp'
 $got = @($pl | Where-Object { $_ -match '^\*' } | ForEach-Object { $_.TrimStart('*') })
 Check 'plugins.txt enables exactly the demo plugins, in order' (($got -join ',') -eq ($want -join ',')) ($got -join ',')
+Check 'the other mod is not enabled together with the Capital Wasteland (clean list)' (-not ($pl -match 'SomeOtherMod'))
+Check 'the earlier plugin list is saved' ((Get-Content (Join-Path $Sandbox 'backup\plugins.txt.pre-capital') -Raw -ErrorAction SilentlyContinue) -match 'SomeOtherMod')
 Check 'Fallout4Custom.ini created with the loose-file settings' ((Get-Content (Join-Path $my 'Fallout4Custom.ini') -Raw -ErrorAction SilentlyContinue) -match 'bInvalidateOlderFiles=1')
 Check 'Fallout4Prefs.ini now enables plugin selection' ((Get-Content (Join-Path $my 'Fallout4Prefs.ini') -Raw) -match 'bEnableFileSelection=1')
 $noGame = @(Get-ChildItem $data -Recurse -File | Where-Object { $_.Extension -in '.exe', '.dll' }).Count
@@ -36,6 +42,7 @@ Check 'uninstall removes files without failures' ($m.Success -and [int]$m.Groups
 $left = @(Get-ChildItem $data -Recurse -File | Where-Object { $_.Name -notin 'keep1.txt', 'keep2.txt' })
 Check 'nothing of ours is left behind' ($left.Count -eq 0) (($left | Select-Object -First 3 | ForEach-Object Name) -join ', ')
 Check "someone else's files in the same folders survive" ((Test-Path (Join-Path $data 'Meshes\Capital\keep1.txt')) -and (Test-Path (Join-Path $data 'Sound\fo3\keep2.txt')))
+Check 'plugins.txt is byte-identical to before (the earlier list is back)' ([IO.File]::ReadAllText((Join-Path $plDir 'plugins.txt')) -eq $plSeed)
 Check 'Fallout4Prefs.ini is byte-identical to before' ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $my 'Fallout4Prefs.ini'))) -eq $prefsBefore)
 Check 'Fallout4Custom.ini created by the install is removed again' (-not (Test-Path (Join-Path $my 'Fallout4Custom.ini')))
 Remove-Item $Sandbox -Recurse -Force -ErrorAction SilentlyContinue
