@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.2 (2026-10-30)
+Fix for the game running too fast. Save compatibility: **save-safe** (no plugin or game data changes; a save made with 0.2.1 is not affected).
+**How you get it:** with the *Updates* button (from 0.2.1: it re-runs only the final install step, minutes, not the hours-long conversion; the program window still says 0.2.1) or with the
+full 0.2.2 download. The button brings the install fix and the install-time message; the **checks-panel warning, the documentation and this file come with the full download only**
+(they are part of the program itself, which the button does not replace). 0.2.0 users need the full download.
+* **The game world ran faster than real time (time, physics, animation all sped up).** Fallout 4 does that whenever it draws more than 60 frames per second, and this mod's demo did not
+  limit the frame rate. A setting alone cannot cap the frame rate, so the demo now does what it can without installing a program:
+  * The install switches **vsync on** when `Fallout4Prefs.ini` has `iPresentInterval=0` (also written with spaces around the `=`). A missing line or a `1` is left alone. The old
+    value is remembered and the uninstall puts it back. If `Fallout4Custom.ini` or `Fallout4.ini` also switches vsync off (they override `Fallout4Prefs.ini`), the install says so and
+    leaves them alone. A line it cannot rewrite safely is not claimed as changed.
+  * On a **screen above 60 Hz** the last lines of the install tell the player how to limit `Fallout4.exe` to 60 fps (NVIDIA Control Panel > Max Frame Rate, AMD Software > Frame Rate
+    Target Control, or RivaTuner Statistics Server), and in the full download the checks panel before the build says so too. Without that limit a 120 or 144 Hz screen still lets the game run too fast.
+  * `docs/TROUBLESHOOTING.md` (*Time runs too fast*), `docs/FAQ.md` and `docs/INSTALL.md` explain it (full download).
+  * Not changed: a hard limit built into the game (an F4SE plugin) is not part of the demo. It needs F4SE and a program file, which the updater does not deliver.
+* Not tested in the game on a 144 Hz screen. Tested: the new checks, the install and the uninstall (25 install tests, 20 detect tests), on a throw-away sandbox.
+
 ## 0.2.1 (2026-10-24)
 Fixes from the second outside test. Save compatibility: **existing saves may break: start a new save** (the five DLC plugins gain 160 placed objects, 66 meshes that were missing now
 exist, and the plugin list is replaced by a clean one). A build of this version is a pre-release without a signed update manifest: the *Updates* button does not offer it; download the zip

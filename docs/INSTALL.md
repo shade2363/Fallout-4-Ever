@@ -43,6 +43,8 @@
   To keep your other plugins enabled instead, build with `CapitalConvert.exe build --keep-other-plugins`. Fallout 4 loads its own master and DLC files without `plugins.txt`.
 * Sets `bEnableFileSelection=1` in `Fallout4Prefs.ini` (it is what makes the game read `plugins.txt`) and adds the loose-file settings to `Fallout4Custom.ini` if that file does not
   exist. The previous values are remembered so uninstalling puts them back.
+* If vsync was explicitly switched off (`iPresentInterval=0` in `Fallout4Prefs.ini`) it is switched on, because without it the game runs faster than real time. Any other value is left alone, and the uninstall puts the old one back.
+* On a screen above 60 Hz the last lines of the install tell you to limit Fallout 4 to 60 fps in your graphics driver (see TROUBLESHOOTING.md, *Time runs too fast*).
 * The last lines of the install log list all of this again, with the paths.
 * Never modifies the original Fallout 3 or Fallout 4 game files.
 

@@ -29,13 +29,13 @@
   },
   {
    "path": "builder/capital_builder.py",
-   "sha256": "b02cf0e399a48090dac4715d501f74aa489e0a2d8a7eb6393b15b0e236ecd668",
+   "sha256": "5952a49f3a539051bacc59b1042970fdc025d38555886d1c7f81465f399bf890",
    "origin": "dev",
    "dev_sha256": "c6a9d4ac652811920dc223182f92bec20324267de452d74e453ff6d2d9b21691"
   },
   {
    "path": "builder/detect.py",
-   "sha256": "a14ec6fd494826e2ac2417e5efd4280ce98e004105cfda69cf59519a7ecb8e89",
+   "sha256": "b1b04646888a9bb65b70b36960bd9a3d1236a6baa7c45107c1f66ec51d0641e9",
    "origin": "dev",
    "dev_sha256": "4188672b1727b34b587df2bb12d252ffce28b4868fb3ecc4ed166147b7665d99"
   },
@@ -90,7 +90,7 @@
   },
   {
    "path": "builder/version.py",
-   "sha256": "1a44a4867d820d8fdbd92ac4c8d077301a770331c11275bdd58a982cd6f6a3e9",
+   "sha256": "1193e3ef0145cb0d98ce76d70fe76655df86cd8df89b5c52a8f7eb90723c8c4b",
    "origin": "repo"
   },
   {
@@ -111,7 +111,7 @@
   },
   {
    "path": "install-output.ps1",
-   "sha256": "29cec47717ced0c28b94075a45e1c8227fb47f3cc4d5bdf3be18bb7673833ed1",
+   "sha256": "ecc879ecea6f734dff459294345ef8fe5264f6f2bfe3f133045c8112b802bd60",
    "origin": "dev",
    "dev_sha256": "5eb52423789459ce8ec3a3dd0a8d72563fa1ba976516abb26f20e24d2be07b1f"
   },

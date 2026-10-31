@@ -324,6 +324,11 @@ if ($Uninstall) {
       if ($u.prefsKey -eq 'absent') { $t = $t -replace '(?m)^bEnableFileSelection=.*\r?\n?', '' } else { $t = $t -replace '(?m)^bEnableFileSelection=[^\r\n]*', ('bEnableFileSelection=' + $u.prefsKey) }
       if ($DryRun) { Log "would restore bEnableFileSelection ($($u.prefsKey)) in Fallout4Prefs.ini" } else { Set-Content $prefsIni $t -NoNewline; Log "Fallout4Prefs.ini: bEnableFileSelection restored ($($u.prefsKey))" }
     }
+    if ($u.vsyncKey -and $u.vsyncKey -ne 'untouched' -and (Test-Path $prefsIni)) {          # the install switched vsync on: put the value it found back
+      $t = Get-Content $prefsIni -Raw
+      $t = $t -replace '(?m)^iPresentInterval=1[ \t]*(?=\r?$)', ('iPresentInterval=' + $u.vsyncKey)
+      if ($DryRun) { Log "would restore iPresentInterval ($($u.vsyncKey)) in Fallout4Prefs.ini" } else { Set-Content $prefsIni $t -NoNewline; Log "Fallout4Prefs.ini: iPresentInterval restored ($($u.vsyncKey))" }
+    }
     if (-not $DryRun) { Remove-Item $undoFile }
   }
   Log 'Not reverted: Data files that are not ours (XDI, F4SE, MCM).'
@@ -460,29 +465,53 @@ else {
 # Loose-file / plugin-selection settings (custom ini is never touched by the launcher)
 if ($DryRun) {
   Log "would ensure $customIni ([Archive] bInvalidateOlderFiles=1, sResourceDataDirsFinal=) and Fallout4Prefs.ini bEnableFileSelection=1"
+  if ((Test-Path $prefsIni) -and ((Get-Content $prefsIni -Raw) -match '(?m)^iPresentInterval[ \t]*=[ \t]*0[ \t]*\r?$')) { Log "would switch vsync on in $prefsIni (iPresentInterval=0 -> 1; the old value is remembered)" }
 } else {
   New-Item -ItemType Directory -Force $myGames | Out-Null
   # what -Uninstall must undo: written once (the first install), so an update never records our own edit as the "original"
   $undoFile = Join-Path (Split-Path $manifest) 'installed-ini-undo.json'
-  $undo = @{ customCreated = $false; prefsKey = 'untouched' }
-  if (Test-Path $undoFile) { $o = Get-Content $undoFile -Raw | ConvertFrom-Json; $undo.customCreated = [bool]$o.customCreated; $undo.prefsKey = [string]$o.prefsKey }
+  $undo = @{ customCreated = $false; prefsKey = 'untouched'; vsyncKey = 'untouched' }
+  if (Test-Path $undoFile) { $o = Get-Content $undoFile -Raw | ConvertFrom-Json; $undo.customCreated = [bool]$o.customCreated; $undo.prefsKey = [string]$o.prefsKey; if ($o.vsyncKey) { $undo.vsyncKey = [string]$o.vsyncKey } }
   if (-not (Test-Path $customIni)) {
     Set-Content $customIni "[Archive]`r`nbInvalidateOlderFiles=1`r`nsResourceDataDirsFinal=`r`n" -Encoding ascii; 'created Fallout4Custom.ini'
     $undo.customCreated = $true
   }
   if (Test-Path $prefsIni) {
     $t = Get-Content $prefsIni -Raw
+    $tBefore = $t
+    $msgs = @()
     if ($t -notmatch '(?m)^bEnableFileSelection=1') {
       if ($undo.prefsKey -eq 'untouched') { $undo.prefsKey = if ($t -match '(?m)^bEnableFileSelection=(.*?)\s*$') { $Matches[1] } else { 'absent' } }
-      Copy-Item $prefsIni "$prefsIni.bak" -Force
       if ($t -match '(?m)^bEnableFileSelection=') { $t = $t -replace '(?m)^bEnableFileSelection=[^\r\n]*', 'bEnableFileSelection=1' }
       elseif ($t -match '(?m)^\[Launcher\]') { $t = $t -replace '(?m)^\[Launcher\]\s*$', "[Launcher]`r`nbEnableFileSelection=1" }
       else { $t += "`r`n[Launcher]`r`nbEnableFileSelection=1`r`n" }
+      $msgs += 'Fallout4Prefs.ini: bEnableFileSelection=1 (backup .bak)'
+    }
+    # Vsync that was explicitly switched off (iPresentInterval=0) lets Fallout 4 run its world faster than real time at any frame rate: switch it on and remember the old value for the uninstall.
+    # Only an explicit 0 is touched: a missing line means the game's own default, which is on.
+    $vsOff = '(?m)^iPresentInterval[ \t]*=[ \t]*0[ \t]*(?=\r?$)'
+    if ($t -match $vsOff) {
+      $tVs = $t -replace $vsOff, 'iPresentInterval=1'
+      if ($tVs -ne $t) {          # only a real change is recorded and reported
+        if ($undo.vsyncKey -eq 'untouched') { $undo.vsyncKey = '0' }
+        $t = $tVs
+        $script:vsyncChanged = $true
+        $msgs += 'Fallout4Prefs.ini: iPresentInterval=1 (vsync was off, which makes the game run too fast; backup .bak)'
+      }
+    }
+    if ($t -ne $tBefore) {
+      Copy-Item $prefsIni "$prefsIni.bak" -Force
       Set-Content $prefsIni $t -NoNewline
-      'Fallout4Prefs.ini: bEnableFileSelection=1 (backup .bak)'
+      $msgs
     }
   } else {
     Write-Warning 'Fallout4Prefs.ini does not exist yet: launch Fallout 4 once from Steam (to the main menu), then re-run this script so mods get enabled.'
+  }
+  # Fallout4.ini is read first, then Fallout4Prefs.ini, then Fallout4Custom.ini: a vsync-off line in either of the others wins over what was fixed above. Only say so, never edit them.
+  foreach ($other in @($customIni, (Join-Path $myGames 'Fallout4.ini'))) {
+    if ((Test-Path $other) -and ((Get-Content $other -Raw) -match '(?m)^iPresentInterval[ \t]*=[ \t]*0[ \t]*\r?$')) {
+      Log "WARNING: $other sets iPresentInterval=0 (vsync off) and overrides Fallout4Prefs.ini: the game will run too fast until that line is removed." 'Yellow'
+    }
   }
   [IO.File]::WriteAllText($undoFile, ($undo | ConvertTo-Json))
 }
@@ -501,6 +530,19 @@ if (-not $DryRun) {
   Log "  $pluginsTxt : $(if ($MergePlugins) { 'our plugins added to your list' } else { 'a clean list with only this mod; your earlier list is saved in ' + $backupRoot })"
   Log "  $prefsIni : bEnableFileSelection=1 (lets the game read plugins.txt; the old value is remembered)"
   Log "  $customIni : loose files are allowed (only created when it did not exist)"
+  if ($script:vsyncChanged) { Log "  $prefsIni : iPresentInterval=1 (vsync was off: that makes the game run too fast; the old value is remembered)" }
+  # Above 60 fps Fallout 4 runs its world (time, physics, animation) faster than real time. This mod does not change that, so say what to do about it.
+  $hz = 0; $envHz = 0
+  if ($env:CAPITAL_REFRESH_HZ -and [int]::TryParse($env:CAPITAL_REFRESH_HZ, [ref]$envHz)) { $hz = $envHz }          # test / manual override
+  else { try { $hz = [int](@(Get-CimInstance Win32_VideoController -ErrorAction Stop | ForEach-Object { [int]$_.CurrentRefreshRate } | Measure-Object -Maximum).Maximum) } catch { $hz = 0 } }
+  Log ''
+  if ($hz -gt 61) {
+    Log "Your screen runs at $hz Hz, so Fallout 4 can draw more than 60 frames per second and the game world (time, physics, animation) then runs too fast." 'Yellow'
+    Log '  Before you play, limit Fallout4.exe to 60 fps: NVIDIA Control Panel > Manage 3D settings > Program Settings > Max Frame Rate, or AMD Software > Gaming > Frame Rate Target Control,' 'Yellow'
+    Log '  or RivaTuner Statistics Server. Details ("Time runs too fast"): https://github.com/shade2363/Fallout-4-Ever/blob/v0.2.2/docs/TROUBLESHOOTING.md' 'Yellow'
+  } else {
+    Log 'If the game world ever runs too fast, limit Fallout4.exe to 60 fps in your graphics driver (details, "Time runs too fast": https://github.com/shade2363/Fallout-4-Ever/blob/v0.2.2/docs/TROUBLESHOOTING.md).'
+  }
   Log 'Done. Start Fallout 4 from Steam, choose New Game, and you start outside Vault 101.'
 }
 Flush-Log

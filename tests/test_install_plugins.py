@@ -101,6 +101,97 @@ class InstallPluginsTests(unittest.TestCase):
         self.assertIn('read-only', text)
         self.assertIn('checked: all 2 plugins are in', text)
 
+    # ---- frame rate: vsync switched off makes the game run too fast; a fast screen needs the player to cap the fps
+    def write_prefs(self, text):
+        with open(self.prefs, 'w', encoding='ascii', newline='') as f:
+            f.write(text)
+
+    def read_prefs(self):
+        with open(self.prefs, encoding='ascii', newline='') as f:
+            return f.read()
+
+    PREFS_VSYNC_OFF = '[Display]\r\niPresentInterval=0\r\niSize W=1920\r\n[Launcher]\r\nbEnableFileSelection=0\r\n'
+
+    def test_vsync_that_was_switched_off_is_switched_on_and_the_uninstall_puts_it_back(self):
+        self.write_prefs(self.PREFS_VSYNC_OFF)
+        text = self.run_ps()
+        got = self.read_prefs()
+        self.assertIn('iPresentInterval=1\r\n', got)
+        self.assertNotIn('iPresentInterval=0', got)
+        self.assertIn('iSize W=1920\r\n', got)                                    # nothing else was touched
+        self.assertIn('bEnableFileSelection=1', got)
+        self.assertIn('vsync was off', text)
+        with open(self.prefs + '.bak', encoding='ascii', newline='') as f:
+            self.assertEqual(f.read(), self.PREFS_VSYNC_OFF)                       # the backup is the file as it was BEFORE the install
+        self.run_ps(uninstall=True)
+        self.assertEqual(self.read_prefs(), self.PREFS_VSYNC_OFF)                    # the old value is back
+
+    def test_vsync_is_left_alone_when_it_is_on_or_not_set(self):
+        for body in ('[Display]\r\niPresentInterval=1\r\n[Launcher]\r\nbEnableFileSelection=0\r\n', '[Display]\r\niSize W=1920\r\n[Launcher]\r\nbEnableFileSelection=0\r\n'):
+            self.write_prefs(body)
+            text = self.run_ps()
+            got = self.read_prefs()
+            self.assertEqual(got.count('iPresentInterval'), body.count('iPresentInterval'))
+            self.assertNotIn('vsync was off', text)
+            self.run_ps(uninstall=True)
+            self.assertEqual(self.read_prefs(), body)
+
+    def test_a_second_install_does_not_lose_the_original_vsync_value(self):
+        self.write_prefs(self.PREFS_VSYNC_OFF)
+        self.run_ps()
+        self.run_ps()
+        self.run_ps(uninstall=True)
+        self.assertEqual(self.read_prefs(), self.PREFS_VSYNC_OFF)
+
+    def test_a_fast_screen_is_told_what_to_do(self):
+        text = self.run_ps(env={'CAPITAL_REFRESH_HZ': '144'})
+        self.assertIn('144 Hz', text)
+        self.assertIn('Max Frame Rate', text)
+        self.assertIn('Time runs too fast', text)
+
+    def test_a_60_hz_screen_gets_a_short_line_only(self):
+        text = self.run_ps(env={'CAPITAL_REFRESH_HZ': '60'})
+        self.assertNotIn(' Hz, so Fallout 4', text)
+        self.assertIn('Time runs too fast', text)
+
+    def test_a_line_the_pattern_cannot_change_is_not_reported_as_changed(self):
+        body = '[Display]\r\niPresentInterval=0\r\r\n[Launcher]\r\nbEnableFileSelection=1\r\n'          # a doubled CR: the line cannot be rewritten safely
+        self.write_prefs(body)
+        text = self.run_ps()
+        self.assertEqual(self.read_prefs(), body)
+        self.assertNotIn('vsync was off', text)
+        self.assertFalse(os.path.exists(self.prefs + '.bak'))
+        with open(os.path.join(self.sb, 'installed-ini-undo.json'), encoding='ascii') as f:
+            self.assertNotIn('"vsyncKey": "0"', f.read())                             # nothing is remembered that was not changed
+
+    def test_the_spaced_form_is_switched_on_too(self):
+        self.write_prefs('[Display]\r\niPresentInterval = 0\r\n[Launcher]\r\nbEnableFileSelection=0\r\n')
+        self.run_ps()
+        self.assertIn('iPresentInterval=1\r\n', self.read_prefs())
+        self.run_ps(uninstall=True)
+        self.assertIn('iPresentInterval=0\r\n', self.read_prefs())                    # restored in the form the game writes
+
+    def test_another_ini_that_keeps_vsync_off_is_reported(self):
+        self.write_prefs(self.PREFS_VSYNC_OFF)
+        custom = os.path.join(self.sb, 'MyGames', 'Fallout4Custom.ini')
+        with open(custom, 'w', encoding='ascii', newline='') as f:
+            f.write('[Display]\r\niPresentInterval=0\r\n')
+        text = self.run_ps()
+        self.assertIn('overrides Fallout4Prefs.ini', text)
+        with open(custom, encoding='ascii', newline='') as f:
+            self.assertIn('iPresentInterval=0', f.read())                              # reported, never edited
+
+    def test_dry_run_says_it_would_switch_vsync_on_and_writes_nothing(self):
+        self.write_prefs(self.PREFS_VSYNC_OFF)
+        text = self.run_ps('-DryRun')
+        self.assertIn('would switch vsync on', text)
+        self.assertEqual(self.read_prefs(), self.PREFS_VSYNC_OFF)
+
+    def test_a_refresh_rate_override_that_is_not_a_number_does_not_stop_the_install(self):
+        for bad in ('99999999999999999999', 'fast', '-5'):
+            text = self.run_ps(env={'CAPITAL_REFRESH_HZ': bad})
+            self.assertIn('Done. Start Fallout 4', text)
+
     def test_dry_run_writes_nothing(self):
         text = self.run_ps('-DryRun')
         self.assertIn('would write plugins.txt', text)

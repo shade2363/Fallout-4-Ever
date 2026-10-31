@@ -141,6 +141,49 @@ class DetectTests(unittest.TestCase):
     def test_full_screen_picks_a_mode_the_screen_supports(self):
         self.assertIsNone(detect.oversize_window_warning(self.prefs(2560, 1440, full=1), (1920, 1080)))
 
+    # ---- a screen above 60 Hz lets Fallout 4 draw more than 60 fps, and above 60 fps its world runs faster than real time
+    def test_a_fast_screen_is_a_warning_with_the_fix(self):
+        for hz in (62, 75, 120, 144, 165, 240):
+            msg = detect.fast_screen_warning(hz)
+            self.assertIn('%d Hz' % hz, msg)
+            self.assertIn('60 fps', msg)
+            self.assertIn('Time runs too fast', msg)
+            self.assertLess(len(msg), 260)                                          # the CHECKS panel of the window is small: one short paragraph
+
+    def test_a_60_hz_screen_is_no_problem(self):
+        for hz in (30, 59, 60, 61, 0):
+            self.assertIsNone(detect.fast_screen_warning(hz))
+
+    def test_without_an_argument_it_asks_windows(self):
+        real = detect.refresh_rate_hz
+        try:
+            detect.refresh_rate_hz = lambda: 144
+            self.assertIn('144 Hz', detect.fast_screen_warning())
+            detect.refresh_rate_hz = lambda: None
+            self.assertIsNone(detect.fast_screen_warning())
+        finally:
+            detect.refresh_rate_hz = real
+
+    def test_a_fast_screen_reaches_the_checks_panel(self):
+        import capital_builder as cb
+        real = detect.fast_screen_warning
+        detect.fast_screen_warning = lambda hz=None: 'FAST SCREEN TEST'
+        try:
+            facts, problems = cb.preflight({'fo4': None, 'fo3_data': None, 'workdir': self.tmp})
+        finally:
+            detect.fast_screen_warning = real
+        self.assertIn(('warn', 'FAST SCREEN TEST'), problems)
+
+    def test_the_windows_structure_has_the_documented_layout(self):
+        import ctypes
+        self.assertEqual(ctypes.sizeof(detect.DEVMODEW), 220)                      # the size Windows documents for DEVMODEW
+        self.assertEqual(detect.DEVMODEW.dmPelsWidth.offset, 172)
+        self.assertEqual(detect.DEVMODEW.dmDisplayFrequency.offset, 184)
+
+    def test_the_refresh_rate_is_a_sane_number_or_none(self):
+        hz = detect.refresh_rate_hz()
+        self.assertTrue(hz is None or 20 <= hz <= 1000, hz)
+
     def test_no_prefs_file_or_no_screen_size_is_silent(self):
         self.assertIsNone(detect.oversize_window_warning(os.path.join(self.tmp, 'missing.ini'), (1920, 1080)))
         self.assertIsNone(detect.oversize_window_warning(self.prefs(2560, 1440), None) if detect.desktop_size() is None else None)

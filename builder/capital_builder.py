@@ -173,6 +173,12 @@ def preflight(cfg):
             problems.append(('warn', w))
     except Exception:
         pass
+    try:
+        w = detect.fast_screen_warning()
+        if w:
+            problems.append(('warn', w))
+    except Exception:
+        pass
     return facts, problems
 
 

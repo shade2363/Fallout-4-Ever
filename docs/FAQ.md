@@ -31,6 +31,10 @@ on every update.
 **Does it need F4SE?**
 No, not for the demo.
 
+**The game world runs too fast (time, walking, animations). What do I do?**
+Fallout 4 runs its world faster than real time above 60 frames per second. Limit `Fallout4.exe` to 60 fps in your graphics driver (NVIDIA Max Frame Rate, AMD Frame Rate Target Control) or with RivaTuner,
+and keep vsync on. Steps: [TROUBLESHOOTING.md](TROUBLESHOOTING.md), "Time runs too fast". The install warns you when your screen is above 60 Hz.
+
 **Why does it take hours?**
 It converts about 14,000 meshes and thousands of textures and 660,000 world records. It only has to do the long part once; updates reuse it.
 

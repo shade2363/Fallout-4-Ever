@@ -15,6 +15,7 @@ checks, no tracking.
 * The update is a small package of our scripts (no game files). Its description is **signed**; the program refuses anything that is not signed with the project's key, or whose
   size or fingerprint differs from the signed values, or that contains program files or game file types.
 * It is unpacked next to your settings and used by the next run. The previous version is kept, so **Roll back** returns to it.
+  (Roll back does not undo an install that already ran. For example the vsync switch of 0.2.2 stays on; the value it replaced is in `Fallout4Prefs.ini.bak` next to the file.)
 * Only the steps whose scripts changed run again, plus every step after them. A script fix usually takes minutes; the long conversion steps (hours) only repeat if the tools
   or their scripts changed, and the release notes say so.
 * If an update needs a **new program version** (the window itself changed), the Updates window says so and links to the new download. Unzip it over the old folder; your

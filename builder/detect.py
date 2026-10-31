@@ -345,6 +345,43 @@ def oversize_window_warning(prefs=None, screen=None):
             % (w, h, screen[0], screen[1], path))
 
 
+import ctypes as _ct
+
+
+class DEVMODEW(_ct.Structure):
+    """the Windows DEVMODEW structure (220 bytes), as far as EnumDisplaySettingsW needs it"""
+    _fields_ = [('dmDeviceName', _ct.c_wchar * 32), ('dmSpecVersion', _ct.c_ushort), ('dmDriverVersion', _ct.c_ushort), ('dmSize', _ct.c_ushort),
+                ('dmDriverExtra', _ct.c_ushort), ('dmFields', _ct.c_ulong), ('dmPositionX', _ct.c_long), ('dmPositionY', _ct.c_long),
+                ('dmDisplayOrientation', _ct.c_ulong), ('dmDisplayFixedOutput', _ct.c_ulong), ('dmColor', _ct.c_short), ('dmDuplex', _ct.c_short),
+                ('dmYResolution', _ct.c_short), ('dmTTOption', _ct.c_short), ('dmCollate', _ct.c_short), ('dmFormName', _ct.c_wchar * 32),
+                ('dmLogPixels', _ct.c_ushort), ('dmBitsPerPel', _ct.c_ulong), ('dmPelsWidth', _ct.c_ulong), ('dmPelsHeight', _ct.c_ulong),
+                ('dmDisplayFlags', _ct.c_ulong), ('dmDisplayFrequency', _ct.c_ulong), ('dmICMMethod', _ct.c_ulong), ('dmICMIntent', _ct.c_ulong),
+                ('dmMediaType', _ct.c_ulong), ('dmDitherType', _ct.c_ulong), ('dmReserved1', _ct.c_ulong), ('dmReserved2', _ct.c_ulong),
+                ('dmPanningWidth', _ct.c_ulong), ('dmPanningHeight', _ct.c_ulong)]
+
+
+def refresh_rate_hz():
+    """refresh rate in Hz of the main screen as Windows reports it right now, or None"""
+    try:
+        dm = DEVMODEW()
+        dm.dmSize = _ct.sizeof(DEVMODEW)
+        if not _ct.windll.user32.EnumDisplaySettingsW(None, -1, _ct.byref(dm)):          # ENUM_CURRENT_SETTINGS
+            return None
+        return int(dm.dmDisplayFrequency) or None
+    except Exception:
+        return None
+
+
+def fast_screen_warning(hz=None):
+    """a short sentence when the screen refreshes faster than 60 Hz, else None.  Fallout 4 runs its world (time, physics, animation) faster than real time above 60 frames
+    per second, and a screen above 60 Hz lets it draw that many, so the player has to limit the game to 60 fps themselves.  (Windows reports 59 or 60 for a 60 Hz screen.)
+    Kept short: the CHECKS panel of the window is small."""
+    hz = hz if hz is not None else refresh_rate_hz()
+    if not hz or hz <= 61:
+        return None
+    return ('Your screen runs at %d Hz: Fallout 4 runs its world too fast above 60 fps. Limit Fallout4.exe to 60 fps in your graphics driver (docs\\TROUBLESHOOTING.md, "Time runs too fast").' % hz)
+
+
 if __name__ == '__main__':
     fo4, fo3 = find_fo4(), find_fo3_data()
     facts, problems = inspect_install(fo4, fo3)
