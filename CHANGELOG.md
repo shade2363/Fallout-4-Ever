@@ -1,9 +1,12 @@
 # Changelog
 
+## 0.3.1 (2026-11-06) TESTING release
+Same as 0.3.0 with one fix: the weather / water step now runs before the actors step (it was after it), so the actors plugin no longer carries the old climates and water of the worlds over the new ones. 0.3.0 is superseded.
+
 ## 0.3.0 (2026-11-06) TESTING release
 Save compatibility: `save-safe` (records are edited and added, none removed or renumbered). A new game is still the cleanest way to see the new lighting.
 This is a testing release: the new look step was verified in the maintainer's game in parts (Vault 101, Moriarty's Saloon, Megaton, the sky at several hours), not everywhere.
-* New step **12b look** (about 1 minute): rebuilds Fallout 3's lighting, weather, water and colour grade, in place on the converted plugins:
+* New steps **05b look** and **12b grade** (about 1 minute): rebuilds Fallout 3's lighting, weather, water and colour grade, in place on the converted plugins:
   * the converter wrote every weather as an empty shell: they are rebuilt from the Fallout 3 originals (colours, clouds, fog, climates) together with graded image spaces;
   * water is recoloured like Fallout 3's, interior cells get the Fallout 3 colour grade of their cell (Moriarty's amber, the vault teal, metro and cave greys);
   * the 467 lights that lost their flags, near clip and falloff in the conversion get them back (this removed the hard-edged pale arcs on walls);

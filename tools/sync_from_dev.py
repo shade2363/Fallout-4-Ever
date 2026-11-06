@@ -11,7 +11,7 @@ import argparse, fnmatch, hashlib, json, os, re, shutil
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BS = chr(92)
-ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 06-actors 10-navmesh 12-fixes 12b-look 15-meshes 16-start 18-install
+ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 05b-look 06-actors 10-navmesh 12-fixes 12b-grade 15-meshes 16-start 18-install
     'tests/crashers.txt',
     'builder/capital_builder.py', 'builder/gui.py', 'builder/detect.py', 'builder/steps.py', 'builder/stages.py', 'builder/xedit_auto.py',
     'builder/make_exe.py',

@@ -23,10 +23,11 @@ Each stage is resumable and records a fingerprint of the scripts it used, so an 
 | 03 | plugins | converts `Fallout3.esm` and the five DLC plugins (xConvert, which is built on xEdit) | about 1 h |
 | 04 | worldfix | repairs what the converter loses: ground cells, placed references, regions, enable states, DLC markers | 1 min |
 | 05 | lod | terrain level-of-detail settings | 1 min |
+| 05b | look | rebuilds Fallout 3's weather, image spaces and water, restores light flags, removes 94 broken destructible headers that crash the game (testing). Runs before the actors step because that step copies the world records | 1 min |
 | 06 | actors | places the Fallout 3 NPCs and creatures as Fallout 4 actors (drives xEdit with simulated clicks, so do not touch the PC) | 6 min |
 | 10 | navmesh | converts 7,198 navigation meshes | 1 min |
 | 12 | fixes | crash-fix overrides and locked terminals | 1 min |
-| 12b | look | rebuilds Fallout 3's weather, image spaces (colour grade), water and interior grade, restores light flags, removes 94 broken destructible headers that crash the game (testing) | 1 min |
+| 12b | grade | gives every interior cell its Fallout 3 colour grade (testing) | 1 min |
 | 15 | meshes | animated doors, terminal models | 1 min |
 | 16 | start | builds the New Game start (`start/`), compiles two scripts with your Creation Kit compiler | 1 min |
 | 18 | install | copies everything into Fallout 4's Data folder and enables the plugins | several min |

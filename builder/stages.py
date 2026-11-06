@@ -39,6 +39,10 @@ STAGES = [
     dict(id='04-worldfix', title='World repairs (stub cells, refs, regions, enable state, interior lighting)', eta='20 min', unverified=True,
          steps=[('call', 'seed_worldfix'), ('ps', 'worldfix/apply-fixes.ps1')], requires=['{wd}/lab/Data/Fallout3.esm'], produces=['{wd}/tool/output/Fallout3.esm']),
     dict(id='05-lod', title='Terrain LOD settings', eta='1 min', steps=[('call', 'lod_settings')], produces=['{wd}/tool/output/LODSettings']),
+    dict(id='05b-look', title='Lighting, weather and water like Fallout 3, light flags, broken destructibles (testing)', eta='1 min',
+         steps=[('py', 'worldfix/fix_light_flags.py'), ('py', 'worldfix/fix_broken_dest.py'), ('py', 'look/build_imagespaces.py'), ('py', 'look/build_weather.py'),
+                ('py', 'look/build_water.py')],
+         requires=['{wd}/tool/output/Fallout3.esm'], produces=['{wd}/look/imagespace_ids.json']),
     dict(id='06-actors', title='Actors (CapitalActors.esp): export, map, place, name', eta='30-60 min', unverified=True,
          steps=[('call', 'actors')], produces=['{wd}/tool/output/CapitalActors.esp']),
     dict(id='06b-dlc-actors', title='DLC actors (CapitalDLCActors.esp): map, place, name, faces', eta='3 min (+ the Creation Kit FaceGen bake: npcfaces/ck_export_dlc.ps1, game closed)', unverified=True, optional=True,
@@ -62,10 +66,9 @@ STAGES = [
          steps=[('call', 'extras')], produces=['{wd}/tool/output/F3_Skills.esp']),
     dict(id='12-fixes', title='Crash fixes (CapitalFixes.esp)', eta='1 min',
          steps=[('py', 'worldfix/fix_crashers.py'), ('py', 'worldfix/lock_terminals.py')], produces=['{wd}/tool/output/CapitalFixes.esp']),
-    dict(id='12b-look', title='Lighting, weather, water and interior colour grade like Fallout 3 (testing)', eta='5 min',
-         steps=[('py', 'worldfix/fix_light_flags.py'), ('py', 'worldfix/fix_broken_dest.py'), ('py', 'look/build_imagespaces.py'), ('py', 'look/build_weather.py'),
-                ('py', 'look/build_water.py'), ('py', 'look/build_interior_grade.py')],
-         requires=['{wd}/tool/output/CapitalActors.esp', '{wd}/tool/output/CapitalNavmesh.esp'], produces=['{wd}/look/imagespace_ids.json']),
+    dict(id='12b-grade', title='Interior colour grade like Fallout 3 (testing)', eta='1 min',
+         steps=[('py', 'look/build_interior_grade.py')],
+         requires=['{wd}/tool/output/CapitalActors.esp', '{wd}/tool/output/CapitalNavmesh.esp'], produces=['{wd}/tool/output/CapitalActors.esp']),
     dict(id='13-furniture', title='Furniture markers (CapitalFurniture.esp)', eta='2 min',
          steps=[('call', 'furn_keywords'), ('py', 'worldfix/furn_markers.py'), ('py', 'worldfix/build_furniture.py')], produces=['{wd}/tool/output/CapitalFurniture.esp']),
     dict(id='14-scripts', title='Attach the converted object scripts (CapitalScripts.esp)', eta='2 min',
@@ -85,7 +88,7 @@ STAGES = [
 
 
 # ---- demo release: world + actors + navmesh only (the full port's other stages stay in the dev tree) ----------------------------------------
-DEMO_STAGES = ['01-prepare', '02-assets', '03-plugins', '04-worldfix', '05-lod', '06-actors', '10-navmesh', '12-fixes', '12b-look', '15-meshes', '18-install']
+DEMO_STAGES = ['01-prepare', '02-assets', '03-plugins', '04-worldfix', '05-lod', '05b-look', '06-actors', '10-navmesh', '12-fixes', '12b-grade', '15-meshes', '18-install']
 STAGES = [s for s in STAGES if s['id'] in DEMO_STAGES]
 PAYLOAD_DIRS = ['builder', 'worldfix', 'actors', 'navmesh', 'packaging', 'tool/xedit/Edit Scripts']
 PAYLOAD_FILES = ['convert-fo3-assets.ps1', 'rename-master.ps1', 'build-actor-map.ps1', 'install-output.ps1',

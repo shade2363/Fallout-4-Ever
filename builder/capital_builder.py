@@ -269,6 +269,9 @@ def stage_hash(stage, wd):
     import hashlib
     h = hashlib.sha256()
     h.update(repr((stage['id'], stage['steps'])).encode())
+    ids = [s['id'] for s in STAGES]
+    if stage['id'] in ids:
+        h.update(repr(ids[:ids.index(stage['id'])]).encode())                 # a stage added in front (an update) makes every later stage stale: they read its output
     deps = []
     for step in stage['steps']:
         kind, *rest = step if isinstance(step, (list, tuple)) else (step,)

@@ -50,6 +50,13 @@ class DemoDependencyTests(unittest.TestCase):
                 self.assertIn(req, produced, '%s requires %s, which no earlier demo stage produces' % (st['id'], req))
             produced.update(st.get('produces', []))
 
+    def test_world_look_runs_before_actors_and_grade_after(self):
+        # CapitalActors.esp carries copies of the world records: they must be taken from the esm AFTER weather / water were rebuilt
+        ids = [st['id'] for st in STAGES]
+        self.assertLess(ids.index('05b-look'), ids.index('06-actors'))
+        self.assertGreater(ids.index('12b-grade'), ids.index('06-actors'))
+        self.assertGreater(ids.index('12b-grade'), ids.index('10-navmesh'))
+
     def test_mesh_audit_only_reads_plugins_the_demo_builds_or_skips_missing_ones(self):
         src = open(os.path.join(ROOT, 'worldfix', 'audit_meshes.py'), encoding='utf-8').read()
         self.assertIn('os.path.isfile(plugin)', src)          # CapitalItems.esp is not built by the demo: the audit must skip it, not crash
@@ -66,6 +73,23 @@ class DemoDependencyTests(unittest.TestCase):
         src = open(os.path.join(ROOT, 'install-output.ps1'), encoding='utf-8').read()
         self.assertNotIn('sStartingConsoleCommand', src)
         self.assertNotIn('coc MegatonEntrance', src)
+
+
+class StageOrderHashTests(unittest.TestCase):
+    def test_a_new_stage_in_front_makes_later_stages_stale(self):
+        import capital_builder as cb
+        tmp = tempfile.mkdtemp()
+        later = next(s for s in cb.STAGES if s['id'] == '06-actors')
+        before = cb.stage_hash(later, tmp)
+        saved = list(cb.STAGES)
+        try:
+            cb.STAGES[:] = [s for s in saved if s['id'] != '05b-look']
+            without = cb.stage_hash(later, tmp)
+        finally:
+            cb.STAGES[:] = saved
+        self.assertNotEqual(before, without)
+        self.assertEqual(cb.stage_hash(next(s for s in saved if s['id'] == '05-lod'), tmp), cb.stage_hash(next(s for s in saved if s['id'] == '05-lod'), tmp))
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 class CrashHandlingTests(unittest.TestCase):
