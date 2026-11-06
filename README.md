@@ -6,11 +6,12 @@ By TikTok@yourstruly_0, with opness1549. Free, MIT-licensed scripts, no game fil
 ![The Fallout 4-Ever window: detected games, checks, the list of steps, one big install button](docs/images/window.png)
 
 > **This is a demo release.** It builds the **world, the actors and the navmesh** (the whole Capital Wasteland and the five DLC worlds, with NPCs and creatures placed where they stood
-> in Fallout 3, and working navigation) plus a **New Game start outside Vault 101**. Quests, dialogue, voice, music, radio, weather and NPC faces are **not** in it yet:
+> in Fallout 3, and working navigation) plus a **New Game start outside Vault 101**. Quests, dialogue, voice, music, radio and NPC faces are **not** in it yet:
 > see [docs/ROADMAP.md](docs/ROADMAP.md) for exactly what is missing and [docs/FAQ.md](docs/FAQ.md) for what works.
 
 ## What you get
 * A Fallout 3 world loading in Fallout 4: terrain, buildings, interiors, doors, terminals (locked ones stay locked), about 4,260 placed NPCs and creatures, 7,198 navmeshes.
+* **Lighting, weather, water and interior colours** rebuilt from Fallout 3's (new in 0.3.0, **testing**: please report how it looks).
 * **New Game** skips Fallout 4's pre-war intro: you arrive right outside Vault 101 with a Pip-Boy, the quest *Escape!* already completed, then the character editor and the SPECIAL screen.
 * Fast travel by console to anywhere: for example `~` then `coc MegatonPlaza`, `coc TheMallMonument`, `coc RivetCityExterior04`.
 

@@ -49,13 +49,13 @@ def shape_positions(d):
 
 class Tree:
     """world transforms of every node / shape of a nif"""
-    def __init__(self, n):
+    def __init__(self, n, skip_root=False):
         self.n = n; self.world = {}
         ident = ((0.0, 0.0, 0.0), (1, 0, 0, 0, 1, 0, 0, 0, 1), 1.0)
 
         def walk(i, pw):
             t, d = n.blocks[i]
-            w = xf_compose(pw, xf_read(d)); self.world[i] = w
+            w = pw if (skip_root and i == 0) else xf_compose(pw, xf_read(d)); self.world[i] = w
             if t in ('NiNode', 'BSFadeNode'):
                 for k in node_fields(d)['kids']:
                     if k >= 0: walk(k, w)
@@ -105,7 +105,7 @@ def import_block(src, dst, i, cache):
 
 
 def build(fo3_bytes, van_bytes, screen_shape):
-    F = Nif(fo3_bytes); V = Nif(van_bytes); tf = Tree(F)
+    F = Nif(fo3_bytes); V = Nif(van_bytes); tf = Tree(F, skip_root=True)       # raw frame: the imported children do not carry the FO3 root node's own rotation
     si = next(i for i, (t, d) in enumerate(F.blocks) if t == 'BSTriShape' and name_of(F, d) == screen_shape)
     w = tf.world[si]; pos = [mat_vec(w[1], v) for v in shape_positions(F.blocks[si][1])]
     pos = [tuple(w[0][k] + w[2] * p[k] for k in range(3)) for p in pos]                       # screen vertices in the FO3 root frame
@@ -126,12 +126,27 @@ def build(fo3_bytes, van_bytes, screen_shape):
     # keep c_screen, Screen:0 and the ScreenType overlays; drop the visible body (button, bodies, vent FX)
     setkids(body, [k for k in node_fields(V.blocks[body][1])['kids'] if k == csc])
     setkids(ordered, [k for k in node_fields(V.blocks[ordered][1])['kids'] if k in (body, vs)])
+    # The FO3 root node can carry a rotation (terminal02: R0 = M, +X -> -Y).  The imported children do not get it, so everything above is measured in the RAW frame (front = +X for all
+    # five models); the placed references use delta = -90 for all of them (written to terminal_models.json).
+    p0, R0, s0 = xf_read(F.blocks[0][1])
+    near = lambda a, b: all(abs(x - y) < 1e-3 for x, y in zip(a, b))
+    delta = -90.0                                  # checked in game (Vault87a terminal02: the bracket touches the wall only with -90): the root rotation of terminal02 does NOT change the reference rotation
+    assert not any(abs(v) > 1e-3 for v in p0), 'unexpected FO3 root translation %s' % (p0,)
     cache = {}
-    kids = [import_block(F, V, k, cache) for k in node_fields(F.blocks[0][1])['kids'] if k >= 0 and F.blocks[k][0] in ('NiNode', 'BSFadeNode', 'BSTriShape')]
+    JUNK = ('test', 'editormarker')                                                          # leftover test copies / editor marker boxes of the FO3 nifs (terminal02: duplicate keyboard + screen, a visible box)
+    kids = [import_block(F, V, k, cache) for k in node_fields(F.blocks[0][1])['kids'] if k >= 0 and F.blocks[k][0] in ('NiNode', 'BSFadeNode', 'BSTriShape')
+            and not name_of(F, F.blocks[k][1]).lower().startswith(JUNK)]
     tr = struct.pack('<3f', *t) + struct.pack('<9f', *M) + struct.pack('<f', 1.0)
+    # the vanilla UI plane bulges ~2.8 units: where it sank behind the FO3 glass the idle screen showed a notched black shape.  Put the whole plane (+ c_screen / ScreenType) in front of the glass.
+    dy = min(0.0, (cv[1] + 0.6) - 0.3 - max(p[1] for p in vp))
+    def shift_y(i, d):
+        b = bytearray(V.blocks[i][1]); ne = struct.unpack_from('<I', b, 4)[0]; q = 8 + 4 * ne + 8
+        struct.pack_into('<f', b, q + 4, struct.unpack_from('<f', b, q + 4)[0] + d); V.blocks[i][1] = bytes(b)
+    if dy:
+        for i_ in {vs, csc, *[j for n_, js in by.items() if n_.startswith('ScreenType') for j in js]}: shift_y(i_, dy)
     vis = V.add('NiNode', node_bytes(dict(name=V.sid('FO3Visual'), extras=[], ctrl=-1, flags=0xe, transform=tr, coll=-1, kids=[k for k in kids if k >= 0], tail=b'')))
     root = node_fields(V.blocks[0][1]); root['kids'] = root['kids'] + [vis]; V.blocks[0][1] = node_bytes(root)
-    return V.tobytes(), t, cf, cv
+    return V.tobytes(), t, cf, cv, delta
 
 
 if __name__ == '__main__':
@@ -143,8 +158,8 @@ if __name__ == '__main__':
     van = read(g, gi, 'meshes/furniture/terminals/terminaloncorded.nif')
     info = {}
     for p, shape in MODELS.items():
-        new, t, cf, cv = build(read(f, idx, p), van, shape)
+        new, t, cf, cv, dl = build(read(f, idx, p), van, shape)
         dst = os.path.join(OUT, 'loose', *p.split('/')); os.makedirs(os.path.dirname(dst), exist_ok=True); open(dst, 'wb').write(new)
-        info[p[len('meshes/new_vegas/'):]] = dict(t=list(t))
+        info[p[len('meshes/new_vegas/'):]] = dict(t=list(t), delta=dl)
         print('built', p, len(new), 't=', [round(x, 1) for x in t], 'fo3 front centre', [round(x, 1) for x in cf], 'vanilla screen', [round(x, 1) for x in cv])
     json.dump(info, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'terminal_models.json'), 'w'), indent=1)

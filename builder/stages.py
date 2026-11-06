@@ -62,6 +62,10 @@ STAGES = [
          steps=[('call', 'extras')], produces=['{wd}/tool/output/F3_Skills.esp']),
     dict(id='12-fixes', title='Crash fixes (CapitalFixes.esp)', eta='1 min',
          steps=[('py', 'worldfix/fix_crashers.py'), ('py', 'worldfix/lock_terminals.py')], produces=['{wd}/tool/output/CapitalFixes.esp']),
+    dict(id='12b-look', title='Lighting, weather, water and interior colour grade like Fallout 3 (testing)', eta='5 min',
+         steps=[('py', 'worldfix/fix_light_flags.py'), ('py', 'worldfix/fix_broken_dest.py'), ('py', 'look/build_imagespaces.py'), ('py', 'look/build_weather.py'),
+                ('py', 'look/build_water.py'), ('py', 'look/build_interior_grade.py')],
+         requires=['{wd}/tool/output/CapitalActors.esp', '{wd}/tool/output/CapitalNavmesh.esp'], produces=['{wd}/look/imagespace_ids.json']),
     dict(id='13-furniture', title='Furniture markers (CapitalFurniture.esp)', eta='2 min',
          steps=[('call', 'furn_keywords'), ('py', 'worldfix/furn_markers.py'), ('py', 'worldfix/build_furniture.py')], produces=['{wd}/tool/output/CapitalFurniture.esp']),
     dict(id='14-scripts', title='Attach the converted object scripts (CapitalScripts.esp)', eta='2 min',
@@ -81,7 +85,7 @@ STAGES = [
 
 
 # ---- demo release: world + actors + navmesh only (the full port's other stages stay in the dev tree) ----------------------------------------
-DEMO_STAGES = ['01-prepare', '02-assets', '03-plugins', '04-worldfix', '05-lod', '06-actors', '10-navmesh', '12-fixes', '15-meshes', '18-install']
+DEMO_STAGES = ['01-prepare', '02-assets', '03-plugins', '04-worldfix', '05-lod', '06-actors', '10-navmesh', '12-fixes', '12b-look', '15-meshes', '18-install']
 STAGES = [s for s in STAGES if s['id'] in DEMO_STAGES]
 PAYLOAD_DIRS = ['builder', 'worldfix', 'actors', 'navmesh', 'packaging', 'tool/xedit/Edit Scripts']
 PAYLOAD_FILES = ['convert-fo3-assets.ps1', 'rename-master.ps1', 'build-actor-map.ps1', 'install-output.ps1',
@@ -100,8 +104,8 @@ for _s in STAGES:
 # New Game start: outside Vault 101 with the Escape! quest completed (start/build_start.py builds CapitalStart.esp and compiles two scripts with your Creation Kit compiler)
 _start = dict(id='16-start', title='New Game start: outside Vault 101, Escape! completed (CapitalStart.esp)', eta='1 min',
               steps=[('py', 'start/build_start.py', '--conv', '{wd}/tool/output/Fallout3.esm', '--fo4', '{fo4}', '--out', '{wd}/tool/output/CapitalStart.esp',
-                      '--src', '{wd}/scripts/src', '--scripts-out', '{wd}/scripts/out', '--special', '{special}')],         # {special}: screen (default) or default, see --no-special-screen
+                      '--src', '{wd}/scripts/src', '--scripts-out', '{wd}/scripts/out')],
               requires=['{wd}/tool/output/Fallout3.esm', '{fo4}/Papyrus Compiler/PapyrusCompiler.exe'],
               produces=['{wd}/tool/output/CapitalStart.esp', '{wd}/scripts/out/CapStartDemo.pex'])
 STAGES.insert([_s['id'] for _s in STAGES].index('18-install'), _start)
-PAYLOAD_DIRS = PAYLOAD_DIRS + ['start']
+PAYLOAD_DIRS = PAYLOAD_DIRS + ['start', 'look']

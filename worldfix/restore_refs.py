@@ -5,17 +5,14 @@ Dropped refs fall in three groups, restored here:
   * Markers (XMarker 0x3B / XMarkerHeading 0x34, same ids in FO4): ~6,200 refs that scripts use as MoveTo / package targets
   * Bottle caps  (source base 0x0F 'Caps001'):   re-based on Fallout 4's Caps001 (0x0000000F)
   * Any ref whose base object WAS converted (statics, doors, containers ... ~220 refs in cells that failed to convert): copied with NAME/DATA/XSCL/EDID/XTEL
-Everything else (XMarkers, room/collision/radiation markers, sound emitters, effects) is skipped on purpose, and the log counts it by reason (ref_reasons.py).
+Everything else (XMarkers, room/collision/radiation markers, sound emitters, effects) is skipped on purpose.
 
   python restore_refs.py --src <FO3 Fallout3.esm> --in <converted esm> --out <esm with refs restored>
 Each restored ref keeps its source FormID (low 24 bits, master index 01); flags keep Persistent (0x400) / Initially Disabled (0x800);
 persistent refs go in the cell's persistent-children group (8), others in temporary (9) / visible-distant (10) as in the source."""
 import argparse, collections, math, struct, sys
 sys.path.insert(0, r'X:\__CAPITAL_WORKDIR__\navmesh')
-from navlib import iter_records, subrecords, sub
-import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ref_reasons
+from navlib import iter_records, subrecords, sub, plugin_header
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--src', required=True); ap.add_argument('--in', dest='inp', required=True); ap.add_argument('--out', required=True)
@@ -25,6 +22,15 @@ def log(m): print(m, flush=True)
 # ------------------------------------------------------------------ source: which refs exist, which are lost
 ds = open(a.src, 'rb').read()
 dc = open(a.inp, 'rb').read()
+src_masters, _ = plugin_header(ds); conv_masters, _ = plugin_header(dc)
+src_own, conv_own = len(src_masters), len(conv_masters)
+def map_fid(fid):
+    """source FormID -> converted FormID: the plugin's own records go to the converted plugin's own index,
+    base-game records to Fallout3.esm (master 1).  Works for the base game (own 0 -> 1) and the DLC esms (own 1 -> 2)."""
+    hi, low = fid >> 24, fid & 0xFFFFFF
+    if hi == src_own: return (conv_own << 24) | low
+    if hi == 0: return (1 << 24) | low
+    return fid
 conv_refs = {r.fid & 0xFFFFFF for r in iter_records(dc) if r.sig == 'REFR'}
 conv_base = {}
 for r in iter_records(dc):
@@ -32,8 +38,10 @@ for r in iter_records(dc):
         conv_base[r.fid & 0xFFFFFF] = r.sig
 conv_ids = {r.fid & 0xFFFFFF for r in iter_records(dc)}
 SKIP_BASE_NAMES = ('xmarker', 'collisionmarker', 'roommarker', 'radiationmarker', 'cocmarker', 'portalmarker', 'planemarker', 'multiboundmarker')
-src_info = ref_reasons.index_bases(ds)           # (signature, editor id, model) of every base record: names the reason a ref cannot be put back
-src_edid = {fid: v[1] for fid, v in src_info.items() if v[0] == 'STAT'}
+src_edid = {}
+for r in iter_records(ds):
+    if r.sig == 'STAT':
+        src_edid[r.fid] = dict(subrecords(ds, r)).get('EDID', bytes(1)).rstrip(bytes(1)).decode('latin1')
 
 def build_ref(r):
     """-> (record bytes, group type) or (None, reason)"""
@@ -57,24 +65,24 @@ def build_ref(r):
         out.append(sub('NAME', struct.pack('<I', 0x0000000F)))  # Fallout 4's Caps001
     elif base in (0x34, 0x3B):
         out.append(sub('NAME', struct.pack('<I', base)))        # XMarkerHeading / XMarker: same FormIDs in Fallout 4; scripts (MoveTo, quest packages) address them by reference
-    elif (base >> 24) == 0 and low in conv_base:
+    elif (base >> 24) in (0, src_own) and low in conv_base:
         edn = src_edid.get(base, '').lower()
         if any(edn.startswith(x) for x in SKIP_BASE_NAMES):
             return None, 'marker base'
-        out.append(sub('NAME', struct.pack('<I', 0x01000000 | low)))
+        out.append(sub('NAME', struct.pack('<I', map_fid(base))))
         if 'XTEL' in subs and len(subs['XTEL']) >= 28:
             x = subs['XTEL']
             dest = struct.unpack_from('<I', x, 0)[0]
-            if (dest >> 24) == 0 and (dest & 0xFFFFFF) in conv_ids:
+            if (dest & 0xFFFFFF) in conv_ids:
                 px, py, pz, rx, ry, rz = struct.unpack_from('<6f', x, 4)
                 flags = struct.unpack_from('<I', x, 28)[0] if len(x) >= 32 else 0
                 if rz < 0:
                     rz += 2 * math.pi
-                out.append(sub('XTEL', struct.pack('<I6fII', 0x01000000 | (dest & 0xFFFFFF), px, py, pz, rx, ry, rz, flags, 0)))
+                out.append(sub('XTEL', struct.pack('<I6fII', map_fid(dest), px, py, pz, rx, ry, rz, flags, 0)))
         if 'XSCL' in subs:
             out.append(sub('XSCL', subs['XSCL']))
     else:
-        return None, ref_reasons.reason(src_info.get(base), base)       # editor marker / ambient sound / ambient effect / water plane ...: see ref_reasons.py
+        return None, 'base not converted'
     if 'EDID' in subs:
         out.insert(0, sub('EDID', subs['EDID']))
     out.append(sub('DATA', subs['DATA']))
@@ -84,7 +92,7 @@ def build_ref(r):
     for l, t in r.chain:
         if t == 10:
             gtype = 10
-    rec = b'REFR' + struct.pack('<IIIIHH', len(body), flags, 0x01000000 | (r.fid & 0xFFFFFF), 0, 131, 0) + body
+    rec = b'REFR' + struct.pack('<IIIIHH', len(body), flags, (conv_own << 24) | (r.fid & 0xFFFFFF), 0, 131, 0) + body
     return rec, gtype
 
 lost = collections.defaultdict(list)        # cell fid (source, low24) -> [(group type, record bytes)]

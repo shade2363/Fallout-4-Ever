@@ -10,19 +10,17 @@ in Fallout 3 (including 300+ named characters as stand-in settlers); 7,198 navme
 
 **Where does New Game start?**
 Right outside Vault 101 with the Pip-Boy, the quest *Escape!* already completed, then the character editor and SPECIAL screen. It replaces Fallout 4's own intro
-script while the mod is installed; uninstalling brings the normal start back. If the SPECIAL screen's Done button cannot be reached on your PC (a game window larger than the
-screen), see [TROUBLESHOOTING.md](TROUBLESHOOTING.md). Details: [SCRIPTS.md](SCRIPTS.md).
+script while the mod is installed; uninstalling brings the normal start back. Details: [SCRIPTS.md](SCRIPTS.md).
 
 **New Game asks "Creations are currently loaded ... Achievements are disabled". Is that normal?**
 Yes: Fallout 4 shows that for any modded game. Press Enter to continue.
 
 **What does not work yet?**
-Quests, dialogue and voice, music and radio, weather and lighting, NPC faces, perks and skills, scripted set pieces, and the Fallout 3 character creation. It is a world to explore.
+Quests, dialogue and voice, music and radio, NPC faces, perks and skills, scripted set pieces, and the Fallout 3 character creation. It is a world to explore.
 
 **Will it work with my mods?**
-It is meant for a clean setup. It adds plugins (`Fallout3.esm`, the DLC esms, `CapitalActors.esp`, `CapitalNavmesh.esp`, `CapitalFixes.esp`, `CapitalStart.esp`) and some loose files,
-and it writes a **clean `plugins.txt`** with only those: your other enabled plugins are saved (not deleted) and come back when you uninstall. Build with `--keep-other-plugins` to keep
-them enabled, at your own risk: mods that change the same cells or the load order may conflict. Test on a copy of your saves.
+It is meant for a clean setup. It adds plugins (`Fallout3.esm`, the DLC esms, `CapitalActors.esp`, `CapitalNavmesh.esp`, `CapitalFixes.esp`) and some loose files. Mods that change
+the same cells or the load order may conflict. Test on a copy of your saves.
 
 **Will it break my existing saves?**
 Adding plugins to a save and then removing them can damage that save (normal for any mod that adds worlds). Use a separate profile or new saves, and see the compatibility line
@@ -30,10 +28,6 @@ on every update.
 
 **Does it need F4SE?**
 No, not for the demo.
-
-**The game world runs too fast (time, walking, animations). What do I do?**
-Fallout 4 runs its world faster than real time above 60 frames per second. Limit `Fallout4.exe` to 60 fps in your graphics driver (NVIDIA Max Frame Rate, AMD Frame Rate Target Control) or with RivaTuner,
-and keep vsync on. Steps: [TROUBLESHOOTING.md](TROUBLESHOOTING.md), "Time runs too fast". The install warns you when your screen is above 60 Hz.
 
 **Why does it take hours?**
 It converts about 14,000 meshes and thousands of textures and 660,000 world records. It only has to do the long part once; updates reuse it.

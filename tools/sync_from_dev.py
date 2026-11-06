@@ -5,14 +5,13 @@
 Scope (demo = world + actors + navmesh): the entry scripts below plus everything they reference (python imports and file names mentioned in
 text), found by following references inside the dev tree. Nothing else is copied.  Third-party programs (tool/, xEdit, Papyrus compiler,
 Archive2 ...) and anything derived from Bethesda data are NEVER copied: they are fetched or built on the user's PC.
-Writes SYNC-MANIFEST.json through tools/verify_manifest.py: the fingerprint of the files THIS repository holds (the payload of the program), with the hash of the
-development tree's copy kept as dev_sha256 where the two differ.  Run tools/leak_scan.py afterwards.
+Writes SYNC-MANIFEST.json (path + sha256).  Run tools/leak_scan.py afterwards.
 """
-import argparse, fnmatch, hashlib, json, os, re, shutil, sys
+import argparse, fnmatch, hashlib, json, os, re, shutil
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BS = chr(92)
-ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 06-actors 10-navmesh 12-fixes 15-meshes 18-install
+ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 06-actors 10-navmesh 12-fixes 12b-look 15-meshes 16-start 18-install
     'tests/crashers.txt',
     'builder/capital_builder.py', 'builder/gui.py', 'builder/detect.py', 'builder/steps.py', 'builder/stages.py', 'builder/xedit_auto.py',
     'builder/make_exe.py',
@@ -20,6 +19,8 @@ ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 06
     'convert-fo3-assets.ps1', 'rename-master.ps1', 'build-actor-map.ps1', 'install-output.ps1',
     'worldfix/apply-fixes.ps1', 'worldfix/restore_dlc_refs.py', 'worldfix/place_disabled_actors.py', 'worldfix/fix_crashers.py', 'worldfix/lock_terminals.py',
     'worldfix/scan_animated_nifs.py', 'worldfix/build_door_anims.py', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py',
+    'worldfix/fix_light_flags.py', 'worldfix/fix_broken_dest.py',
+    'look/build_imagespaces.py', 'look/build_weather.py', 'look/build_water.py', 'look/build_interior_grade.py',
     'worldfix/convert_single_mesh.py', 'worldfix/add_terminal_hybrid.py', 'worldfix/fix_terminal_refs.py', 'worldfix/make_empty_plugin.py',
     'actors/name_actors.py', 'actors/name_disabled.py', 'actors/name_more_actors.py',
     'navmesh/convert_navmesh.py', 'packaging/pack_ba2.ps1', 'packaging/common.ps1', 'packaging/ba2_tool.py', 'packaging/stage_dds.py',
@@ -31,14 +32,13 @@ ENTRY = [   # demo stages: 01-prepare 02-assets 03-plugins 04-worldfix 05-lod 06
 DENY = ['*.pyc', '__pycache__', '*.before-*', '*.pre-*', '*.orig', '*.bak', '*.log', '*.err', 'dlc_*', '*speakers*', 'children.json',
         'voice_manifest*', 'counts-*', 'inspect-*', 'unresolved-*', 'outfit_models*', 'weapon_*', 'blender_*', 'build_outfits*', '*suit*',
         '*.esm', '*.esp', '*.esl', '*.ba2', '*.bsa', '*.nif', '*.dds', '*.tga', '*.ogg', '*.wav', '*.fuz', '*.bk2', '*.bik', '*.swf', '*.hkx',
-        '*.pex', '*.exe', '*.dll']
-DENY_DIRS = ['dialogue/', 'ai/', 'audio/', 'voice/', 'quests/', 'items/', 'perks/', 'skills/', 'objscripts/', 'npcfaces/', 'look/', 'ui/', 'tests/', 'kitbridge/', 'anim/', 'characters/', 'childhood/', 'dist/', 'build/', 'lab/', 'scripts/compiler/', 'backup/', 'Logs/', 'screenshots/', 'deliverables/', 'ui/fo3', 'ui/fo4']
+        '*.pex', '*.exe', '*.dll',
+        'imagespace_ids.json', 'weather_test_ids*', 'make_weather_tests*']        # generated on the user's PC by look/build_imagespaces.py
+DENY_DIRS = ['dialogue/', 'ai/', 'audio/', 'voice/', 'quests/', 'items/', 'perks/', 'skills/', 'objscripts/', 'npcfaces/', 'ui/', 'tests/', 'kitbridge/', 'anim/', 'characters/', 'childhood/', 'dist/', 'build/', 'lab/', 'scripts/compiler/', 'backup/', 'Logs/', 'screenshots/', 'deliverables/', 'ui/fo3', 'ui/fo4']
 REF = re.compile(r'[A-Za-z0-9_./\\ -]*[A-Za-z0-9_-]\.(?:py|ps1|pas|json|psc)\b')
 IMP = re.compile(r'^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)', re.M)
 TEXT = ('.py', '.ps1', '.psc', '.pas')
-OWNED = ('builder/', 'install-output.ps1', 'convert-fo3-assets.ps1', 'packaging/common.ps1', 'start/', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py',
-         'worldfix/convert_single_mesh.py', 'worldfix/build_door_anims.py', 'worldfix/restore_dlc_refs.py', 'worldfix/restore_refs.py',
-         'worldfix/elric_prep.py', 'worldfix/ref_reasons.py')       # seeded once from the dev tree, then owned by this repo (a later sync never overwrites them)
+OWNED = ('builder/', 'install-output.ps1', 'worldfix/audit_meshes.py', 'worldfix/convert_missing.py', 'worldfix/convert_single_mesh.py', 'look/build_interior_grade.py')       # seeded once from the dev tree, then owned by this repo
 # machine-specific literals of the dev PC -> neutral placeholders (the builder's staging step maps the placeholders to the user's detected folders)
 def _local():
     """your dev-machine paths live in publish/local/config.json (git-ignored); nothing personal is written in this tracked file"""
@@ -120,10 +120,9 @@ def main():
     mp = os.path.join(HERE, 'SYNC-MANIFEST.json')
     if os.path.exists(mp) and not a.dry_run:
         for f in json.load(open(mp))['files']:
-            # only files the dev tree supplies: a file that lives only in this repo (origin "repo") is never removed because the dev tree does not know it
-            if f.get('origin', 'dev') == 'dev' and f['path'] not in wanted and os.path.exists(os.path.join(HERE, f['path'])):
+            if f['path'] not in wanted and os.path.exists(os.path.join(HERE, f['path'])):
                 os.remove(os.path.join(HERE, f['path']))
-    dev_hash = {}
+    man = []
     for rel in sorted(wanted):
         src, dst = os.path.join(dev, rel), os.path.join(HERE, rel)
         raw = open(src, 'rb').read()
@@ -133,7 +132,7 @@ def main():
             raw = ''.join(tab.join(c[:5] + ['']) + chr(10) for c in rows).encode('utf-8')
         elif rel.lower().endswith(TEXT + ('.json',)):
             raw = scrub(raw.decode('utf-8', errors='surrogateescape')).encode('utf-8', errors='surrogateescape')
-        dev_hash[rel] = hashlib.sha256(raw.replace(b'\r\n', b'\n')).hexdigest()
+        man.append({'path': rel, 'sha256': hashlib.sha256(raw).hexdigest()})
         if rel.startswith(OWNED) and os.path.exists(dst):
             continue            # the installer is a release product now: edited here, never overwritten from the dev tree
         if not a.dry_run:
@@ -143,9 +142,7 @@ def main():
         for r, ds, fs in os.walk(HERE, topdown=False):
             if not fs and not ds and '.git' not in r and r != HERE:
                 os.rmdir(r)
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import verify_manifest
-        verify_manifest.write(HERE, mp, dev_hash)           # the hashes of the files as they are in THIS repository (the dev tree's copy is kept as dev_sha256)
+        json.dump({'files': man}, open(mp, 'w'), indent=1)
     print('%d files %s; %d references skipped' % (len(wanted), 'would be copied' if a.dry_run else 'copied', len(skipped)))
     for s in sorted(skipped):
         if not s.endswith('.pyc'):

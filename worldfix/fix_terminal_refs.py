@@ -65,7 +65,7 @@ for f in files:
         while p < end:
             sig = bytes(buf[p:p+4]); ssz = struct.unpack_from('<H', buf, p + 4)[0]
             if sig == b'DATA' and ssz == 24:
-                new = (srz + delta) % (2 * math.pi); tx, ty, tz = INFO[tm]['t']; c, s_ = math.cos(new), math.sin(new)
+                new = (srz + (math.radians(INFO[tm]['delta']) if 'delta' in INFO[tm] else delta)) % (2 * math.pi); tx, ty, tz = INFO[tm]['t']; c, s_ = math.cos(new), math.sin(new)          # per-model delta: -90 for R0 = identity, 0 for terminal02 (R0 = M); c, s_ = math.cos(new), math.sin(new)
                 # visual world = pos' + R_b(new) (M v + t) must equal pos + R_b(orig) v  =>  pos' = pos - R_b(new) t   (R_b(a): x' = x cos a + y sin a, y' = -x sin a + y cos a)
                 struct.pack_into('<3f', buf, p + 6, sx - (tx * c + ty * s_), sy - (-tx * s_ + ty * c), sz - tz)
                 struct.pack_into('<f', buf, p + 6 + 20, new); n += 1; break

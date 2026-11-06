@@ -26,6 +26,7 @@ Each stage is resumable and records a fingerprint of the scripts it used, so an 
 | 06 | actors | places the Fallout 3 NPCs and creatures as Fallout 4 actors (drives xEdit with simulated clicks, so do not touch the PC) | 6 min |
 | 10 | navmesh | converts 7,198 navigation meshes | 1 min |
 | 12 | fixes | crash-fix overrides and locked terminals | 1 min |
+| 12b | look | rebuilds Fallout 3's weather, image spaces (colour grade), water and interior grade, restores light flags, removes 94 broken destructible headers that crash the game (testing) | 1 min |
 | 15 | meshes | animated doors, terminal models | 1 min |
 | 16 | start | builds the New Game start (`start/`), compiles two scripts with your Creation Kit compiler | 1 min |
 | 18 | install | copies everything into Fallout 4's Data folder and enables the plugins | several min |
@@ -59,8 +60,5 @@ tool from a tree that passed a gate (no game files, no credentials, no private p
 Maintainer details: [publish/README.md](../publish/README.md).
 
 ## Tests
-`python -m unittest discover -s tests` runs the offline tests (updates and signatures, change detection, game detection on simulated installs, the start builder, the publish gate,
-the command line, the mesh preparation for Elric, the install on a throw-away sandbox: its plugin list and uninstall, and that `SYNC-MANIFEST.json` still describes the payload).
-`SYNC-MANIFEST.json` fingerprints the program payload; after editing a payload file run `python tools/verify_manifest.py --update`, and
-`python tools/verify_manifest.py --root dist\CapitalConvert\_internal\payload` proves a built program carries exactly the files of this repository.
+`python -m unittest discover -s tests` runs the offline tests (updates and signatures, change detection, game detection on simulated installs, the start builder, the publish gate).
 `python tools/smoke_exe.py` runs the *packaged* exe the way a stranger would. Game-dependent checks are listed in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).

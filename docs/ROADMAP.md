@@ -17,7 +17,7 @@ An honest list of what exists and what does not. Nothing here is a promise or a 
 - [ ] Weapons, armour and consumables mapped to working Fallout 4 equivalents
 - [ ] Object, NPC and trigger scripts (about 2,000, spot-checked only)
 - [ ] Music, radio and sound effects
-- [ ] Weather and lighting rebuilt from Fallout 3's
+- [~] Weather and lighting rebuilt from Fallout 3's: in 0.3.0 as a **testing** stage (looked at in a few places; not every weather type and world has been judged by eye)
 - [ ] NPC faces and body skin tones matched to Fallout 3
 - [ ] Skills, perks and the Fallout 3 character editor look (needs F4SE)
 - [ ] Companions, furniture use (sit, sleep), AI daily routines
